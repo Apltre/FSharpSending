@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FSharpSending.Queue", "FSharpSending.Queue\FSharpSending.Queue.fsproj", "{3BF1BEAD-FC3B-42E8-9184-7F0094615EAD}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpSending.Common", "FSharpSending.Common\FSharpSending.Common.fsproj", "{FC5A619A-404D-49BD-BEB6-BC89D618E20D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3BF1BEAD-FC3B-42E8-9184-7F0094615EAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BF1BEAD-FC3B-42E8-9184-7F0094615EAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BF1BEAD-FC3B-42E8-9184-7F0094615EAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BF1BEAD-FC3B-42E8-9184-7F0094615EAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC5A619A-404D-49BD-BEB6-BC89D618E20D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC5A619A-404D-49BD-BEB6-BC89D618E20D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC5A619A-404D-49BD-BEB6-BC89D618E20D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC5A619A-404D-49BD-BEB6-BC89D618E20D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E1C7610E-1999-4002-9C97-A979EED3904E}
+	EndGlobalSection
+EndGlobal
