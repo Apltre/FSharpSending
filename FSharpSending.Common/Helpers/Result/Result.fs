@@ -18,16 +18,14 @@ let switch f =
     f >> Ok
 
 // convert a dead-end function into a one-track function
-let tee f x =
-    f x; x
 
  // apply function to success ignoring it's result and passing two track input further 
 let teeOk f twoTrackInput =
-    either ((tee f) >> Ok)  Error twoTrackInput
+    either ((Pipe.tee f) >> Ok)  Error twoTrackInput
 
 // apply function to error ignoring it's result and passing two track input further 
 let teeError f twoTrackInput =
-   either Ok ((tee f) >> Error) twoTrackInput
+   either Ok ((Pipe.tee f) >> Error) twoTrackInput
 
 // convert a one-track function into a switch with exception handling
 let tryCatch f exnHandler x =
