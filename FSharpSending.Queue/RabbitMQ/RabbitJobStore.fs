@@ -22,14 +22,13 @@ module RabbitJobStore =
     let initializeRabbitQueues workflowId (rabbitChannel: IModel) () =
            let declareReliableChannelForWorkflow = QueueHelper.declareReliableChannel workflowId
            rabbitChannel
-            |> Result.switch (fun x -> x)
-            |> Result.teeOk (declareReliableChannelForWorkflow QueueNames.getSendingToQueueName)
-            |> Result.teeOk (declareReliableChannelForWorkflow QueueNames.getQueueToSendingName)
-            |> Result.teeOk (declareReliableChannelForWorkflow QueueNames.getQueueToResultsName)
-            |> Result.teeOk (declareReliableChannelForWorkflow QueueNames.getResultsToQueueName)
+            |> Pipe.tee (declareReliableChannelForWorkflow QueueNames.getSendingToQueueName)
+            |> Pipe.tee (declareReliableChannelForWorkflow QueueNames.getQueueToSendingName)
+            |> Pipe.tee (declareReliableChannelForWorkflow QueueNames.getQueueToResultsName)
+            |> Pipe.tee (declareReliableChannelForWorkflow QueueNames.getResultsToQueueName)
             |> ignore
 
-    let createRabbitJobStore (connection : IConnection) (workflowId: WorkflowId) (logError: Logger.LogErrorFunc ) =
+    let createRabbitJobStore (connection : IConnection) (workflowId: WorkflowId) (logError: Logger.LogErrorFunc) =
         let actor = getActor (connection.CreateModel ())
 
         {

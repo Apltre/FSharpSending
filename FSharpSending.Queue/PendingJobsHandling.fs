@@ -1,9 +1,9 @@
 ﻿namespace FSharpSending.Queue
 
-open FSharpSending.Queue.Stores
 open Logger
 open FSharpSending.Common.Types.CommonTypes
 open FSharpSending.Queue.Stores.JobMessageBus
+open FSharpSending.Queue.Stores.DbJob
 
 module PendingJobsHandler =
     type HandledJobsCount = int

@@ -1,9 +1,10 @@
 ﻿module SentJobHandling
 
 open FSharpSending.Common.Types.CommonTypes
-open FSharpSending.Queue.Stores
 open System
 open FSharpSending.Queue.Stores.JobMessageBus
+open FSharpSending.Queue.Stores.DbJob
+open FSharpSending.Common.Helpers.Signal
 
     type ValidStatusSendingInfoJob =  ValidStatusSendingInfoJob of Job
     type PrepairedJob = PrepairedJob of Job
@@ -26,7 +27,10 @@ open FSharpSending.Queue.Stores.JobMessageBus
                             }
 
     let updateJob (UpdateJobFunc dbUpdate) (PrepairedJob job) =
-        dbUpdate job
+        job
+        |> dbUpdate 
+        |> CompletedSignalModule.awaitCompleted
+        |> Async.RunSynchronously
 
     let createNewJobAndPersistIfNeeded (AddJobFunc dbAdd) (PrepairedJob job) =
         let sendingInfo = job.SendingInfo

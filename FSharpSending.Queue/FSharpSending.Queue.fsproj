@@ -6,8 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Stores\JobMessageBus.fs" />
-    <Compile Include="Stores\DbJobStore.fs" />
+    <Compile Include="Stores.fs" />
     <Compile Include="Mongo\MongoJob.fs" />
     <Compile Include="Mongo\MongoJobStore.fs" />
     <Compile Include="RabbitMQ\RabbitJobStore.fs" />

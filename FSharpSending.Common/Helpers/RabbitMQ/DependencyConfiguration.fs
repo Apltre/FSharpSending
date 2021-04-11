@@ -13,6 +13,6 @@ module DependencyConfiguration =
         services.AddSingleton<IConnection>(fun serviceProvider ->
             let factory = serviceProvider.GetRequiredService<IOptions<ConnectionFactory>>().Value
             factory.AutomaticRecoveryEnabled <- true
-            factory.TopologyRecoveryEnabled <- false
+            factory.TopologyRecoveryEnabled <- true
             factory.CreateConnection()
          ) |> ignore

@@ -5,7 +5,6 @@ open Microsoft.Extensions.DependencyInjection
 open FSharpSending.Common.Helpers.RabbitMQ.DependencyConfiguration
 open MongoDB.Driver
 open FSharpSending.Queue.Mongo
-open FSharpSending.Queue.Stores
 open System
 open Logger
 open Microsoft.Extensions.Logging
@@ -13,6 +12,7 @@ open FSharpSending.Queue.Stores.JobMessageBus
 open RabbitMQ.Client
 open FSharpSending.Common.Types.CommonTypes
 open FSharpSending.Queue.RabbitMQ
+open FSharpSending.Queue.Stores.DbJob
 
 module Startup =
     type IServiceCollection with

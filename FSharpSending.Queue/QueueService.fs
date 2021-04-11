@@ -7,13 +7,13 @@ open Microsoft.Extensions.Configuration
 open FSharpSending.Common.Types.CommonTypes
 open Logger
 open System
-open FSharpSending.Queue.Stores
 open FSharpSending.Queue.Stores.JobMessageBus
 open FSharpSending.Common.Helpers.Json
+open FSharpSending.Queue.Stores.DbJob
 
 type QueueService(configuration : IConfiguration, busStore: MessageBusStore, jobStore: DbJobStore, loggerStore: LoggerStore) =  
 
-    let logInfoUninit (LogInfoFunc logInfo) message =
+    let initlogInfo (LogInfoFunc logInfo) message =
         logInfo message
 
     let sentConsumer (GetSendingBusConsumerFunc sentConsumer) (jobStore : DbJobStore) =
@@ -27,7 +27,7 @@ type QueueService(configuration : IConfiguration, busStore: MessageBusStore, job
          sentConsumer handler
 
     let service (loggerStore : LoggerStore) (busStore: MessageBusStore) (jobStore : DbJobStore) (workflowId: WorkflowId) =
-        let logInfo = logInfoUninit (loggerStore.logMessage)
+        let logInfo = initlogInfo (loggerStore.logMessage)
         logInfo $"Service Id = {workflowId} started."
         busStore.initializeQueues ()
         

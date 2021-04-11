@@ -18,9 +18,11 @@
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
+    <Compile Include="Helpers\Signal\Signal.fs" />
+    <Compile Include="Helpers\Pipe\Pipe.fs" />
+    <Compile Include="Helpers\Result\Result.fs" />
     <Compile Include="Helpers\Json\Decoder.fs" />
     <Compile Include="Helpers\Common\CommonHelper.fs" />
-    <Compile Include="Helpers\Result\Result.fs" />
     <Compile Include="Helpers\Logger\Logger.fs" />
     <Compile Include="Helpers\RabbitMQ\QueueNames.fs" />
     <Compile Include="Helpers\RabbitMQ\QueueConfiguration.fs" />

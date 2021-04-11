@@ -1,8 +1,9 @@
 ﻿module JobResultHandling
 
 open FSharpSending.Common.Types.CommonTypes
-open FSharpSending.Queue.Stores
 open System
+open FSharpSending.Queue.Stores.DbJob
+open FSharpSending.Common.Helpers.Signal
 
     type ValidStatusSendingInfo = ValidStatusSendingInfo of SendingInfo
     type ValidSendingResultStatusInfo = {
@@ -102,7 +103,10 @@ open System
 
     let updateJob (UpdateJobFunc update) (PrepairedJob job) =
         let job = ValidatedResultHandlingJobModule.toJob job
-        update job
+        job
+        |> update 
+        |> CompletedSignalModule.awaitCompleted
+        |> Async.RunSynchronously
 
     let handleResultJob (update : UpdateJobFunc) (job : HandledResultJob)  =
         job |> validateJob 
