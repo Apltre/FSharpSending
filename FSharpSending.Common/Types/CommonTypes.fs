@@ -104,6 +104,9 @@ module CommonTypes =
         | DbUpdateFailExn of Exception
         | DbQueryFailExn of Exception
         | MessageQueueFailExn of Exception
+        | MessageQueueEnqueueFailExn of Exception
+        | MessageQueueConsumeFailExn of Exception
+        | MessageQueueConsumeFail of string
 
 //open CommonTypes
 

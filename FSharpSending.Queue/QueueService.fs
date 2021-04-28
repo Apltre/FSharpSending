@@ -34,8 +34,6 @@ type QueueService(configuration : IConfiguration, busStore: MessageBusStore, job
         sentConsumer busStore.getSendingConsumer jobStore
         resultConsumer busStore.getResultsConsumer jobStore.updateJob
         PendingJobsHandler.handlePendingJobs jobStore busStore loggerStore.logMessage () |> Async.RunSynchronously
-      
-        logInfo $"Queues initialized."
 
     interface IHostedService with
         member this.StartAsync (cancellationToken : CancellationToken) =

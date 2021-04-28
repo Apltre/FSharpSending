@@ -4,6 +4,7 @@ open Logger
 open FSharpSending.Common.Types.CommonTypes
 open FSharpSending.Queue.Stores.JobMessageBus
 open FSharpSending.Queue.Stores.DbJob
+open FSharpSending.Common.Helpers.Signal
 
 module PendingJobsHandler =
     type HandledJobsCount = int
@@ -18,24 +19,24 @@ module PendingJobsHandler =
                    { job.ResultHandlingInfo with ResultHandlingStatus = Some JobResultHandlingStatus.BeingProcessed }
         }
 
-    let handleNewPendingJobs (GetPendingJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) (ToSendingBusQueueFunc enqueue) () : Async<HandledJobsCount> =
+    let handleNewPendingJobs (GetPendingJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) (ToSendingBusQueueFunc enqueue) () : Async<(HandledJobsCount * CompletedSignalAwaiter)> =
         async {
             log "pending jobs selection"
             let! pendingJobs = getJobs ()
             let beingProcessedJobs = List.map setJobToBeingProcessed pendingJobs
-            updateJobs beingProcessedJobs
+            let commitAwaiter = updateJobs beingProcessedJobs
             beingProcessedJobs |> List.iter enqueue
-            return pendingJobs.Length
+            return (pendingJobs.Length, commitAwaiter)
         }
 
-    let handlePendingResultJobs (GetPendingResultHandlingJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) (ToResultBusQueueFunc enqueue) () : Async<HandledJobsCount> =
+    let handlePendingResultJobs (GetPendingResultHandlingJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) (ToResultBusQueueFunc enqueue) () : Async<(HandledJobsCount * CompletedSignalAwaiter)> =
         async {
             log "pending results selection"
             let! pendingResultJobs = getJobs ()
             let beingResultProcessedJobs = List.map setJobToBeingResultProcessed pendingResultJobs
-            updateJobs beingResultProcessedJobs
+            let commitAwaiter = updateJobs beingResultProcessedJobs
             beingResultProcessedJobs |> List.iter enqueue
-            return pendingResultJobs.Length
+            return (pendingResultJobs.Length, commitAwaiter)
         }
 
     let handlePendingJobs (jobStore: DbJobStore) (busStore: MessageBusStore) (loggerFunc: LogInfoFunc) () =
@@ -43,11 +44,12 @@ module PendingJobsHandler =
         let handleR = handlePendingResultJobs jobStore.getPendingResultHandlingJobs loggerFunc jobStore.updateJobs busStore.enqueueToResult
         let rec handle () = 
             async {
-                let! handledJobsCount = handleJ ()
-                let! handleResultJobsCount = handleR ()
+                let! (handledJobsCount, hjCommitAwaiter) = handleJ ()
+                let! (handleResultJobsCount, hrjCommitAwaiter) = handleR ()
 
                 match (handledJobsCount + handleResultJobsCount) > 0 with
-                | true -> ()
+                | true -> do! CompletedSignalModule.awaitCompleted hjCommitAwaiter
+                          do! CompletedSignalModule.awaitCompleted hrjCommitAwaiter
                 | false -> do! Async.Sleep(100)
                 do! handle ()   
             }

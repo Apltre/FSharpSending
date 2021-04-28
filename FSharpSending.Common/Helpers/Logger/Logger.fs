@@ -18,7 +18,9 @@ let logError (logger : ILogger) (error : DomainError)  =
     | DbQueryFailExn exn -> logger.LogError(exn, "DbQueryFail!")
     | DbUpdateFailExn exn -> logger.LogError(exn, "DbUpdateFail!")
     | Error e -> logger.LogError(e)
-    | MessageQueueFailExn exn -> logger.LogError(exn, "MessageQueueFail")
+    | MessageQueueEnqueueFailExn exn -> logger.LogError(exn, "MessageQueueEnqueueFail")
+    | MessageQueueConsumeFailExn exn -> logger.LogError(exn, "MessageQueueConsumeFail")
+    | MessageQueueConsumeFail e ->logger.LogError e
 
 let logMessage (logger : ILogger) message  =
    logger.LogInformation message
