@@ -33,6 +33,7 @@ type QueueService(configuration : IConfiguration, busStore: MessageBusStore, job
         
         sentConsumer busStore.getSendingConsumer jobStore
         resultConsumer busStore.getResultsConsumer jobStore.updateJob
+        StaleJobsHandler.handleStaleJobs jobStore loggerStore.logMessage () |> Async.StartAsTask |> ignore
         PendingJobsHandler.handlePendingJobs jobStore busStore loggerStore.logMessage () |> Async.RunSynchronously
 
     interface IHostedService with

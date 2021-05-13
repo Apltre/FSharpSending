@@ -10,7 +10,8 @@
     <Compile Include="Mongo\MongoJob.fs" />
     <Compile Include="Mongo\MongoJobStore.fs" />
     <Compile Include="RabbitMQ\RabbitJobStore.fs" />
-    <Compile Include="PendingJobsHandling.fs" />
+    <Compile Include="PendingJobsHandler.fs" />
+    <Compile Include="StaleJobsHandler.fs" />
     <Compile Include="JobResultHandling.fs" />
     <Compile Include="SentJobHandling.fs" />
     <Compile Include="Startup.fs" />

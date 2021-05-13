@@ -29,6 +29,27 @@ module MongoJobStore =
                         |> List.map MongoJobModule.ofMongoJob 
         }        
 
+    let getStaleJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+        async {
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.BeingProcessed && job.StartTime <= DateTime.Now.AddHours(-2.0))
+                                      .SortBy(fun job -> job.Id :> Object)
+                                      .Limit(100)
+                                      .ToListAsync() |> Async.AwaitTask
+            return jobs  |> Seq.toList
+                         |> List.map MongoJobModule.ofMongoJob
+        }   
+
+    let getStaleResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+        async {
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.BeingProcessed 
+                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now.AddHours(-2.0))
+                                      .SortBy(fun job -> job.Id :> Object)
+                                      .Limit(100)
+                                      .ToListAsync() |> Async.AwaitTask
+            return jobs |> Seq.toList
+                        |> List.map MongoJobModule.ofMongoJob 
+        }    
+
     let addJobs (jobsCollection: IMongoCollection<MongoJob>) (jobs : Job list) = 
         async {
             let mongoJobs = jobs |> List.map MongoJobModule.toMongoJob
@@ -120,6 +141,8 @@ module MongoJobStore =
         { 
             getPendingJobs = GetPendingJobsFunc (getPendingJobs jobsCollection)
             getPendingResultHandlingJobs = GetPendingResultHandlingJobsFunc (getPendingResultHandlingJobs jobsCollection)
+            getStaleJobs = GetStaleJobsFunc (getStaleJobs jobsCollection)
+            getStaleResultHandlingJobs = GetStaleResultHandlingJobsFunc (getStaleResultHandlingJobs jobsCollection)
             addJobs = AddJobsFunc enqueueJobsAdd
             addJob = AddJobFunc enqueueJobAdd
             updateJobs = UpdateJobsFunc enqueueJobsUpdate

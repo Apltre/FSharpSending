@@ -24,11 +24,15 @@ module DbJob =
     type UpdateJobFunc = UpdateJobFunc of (Job -> CompletedSignalAwaiter)
     type GetPendingJobsFunc = GetPendingJobsFunc of (unit -> Async<Job list>)
     type GetPendingResultHandlingJobsFunc = GetPendingResultHandlingJobsFunc of (unit -> Async<Job list>)
+    type GetStaleJobsFunc = GetStaleJobsFunc of (unit -> Async<Job list>)
+    type GetStaleResultHandlingJobsFunc = GetStaleResultHandlingJobsFunc of (unit -> Async<Job list>)
 
     type DbJobStore =
         { 
             getPendingJobs :  GetPendingJobsFunc
             getPendingResultHandlingJobs : GetPendingResultHandlingJobsFunc
+            getStaleJobs :  GetStaleJobsFunc
+            getStaleResultHandlingJobs : GetStaleResultHandlingJobsFunc
             addJobs : AddJobsFunc
             addJob : AddJobFunc
             updateJobs : UpdateJobsFunc
