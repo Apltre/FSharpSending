@@ -1,26 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Controllers\AgentsController.fs" />
     <Compile Include="Stores.fs" />
-    <Compile Include="Mongo\MongoJob.fs" />
-    <Compile Include="Mongo\MongoJobStore.fs" />
     <Compile Include="RabbitMQ\RabbitJobStore.fs" />
-    <Compile Include="PendingJobsHandler.fs" />
-    <Compile Include="StaleJobsHandler.fs" />
-    <Compile Include="JobResultHandling.fs" />
-    <Compile Include="SentJobHandling.fs" />
+    <Compile Include="JobProcessor.fs" />
     <Compile Include="Startup.fs" />
-    <Compile Include="QueueService.fs" />
+    <Compile Include="SendingService.fs" />
     <Compile Include="Program.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Dockerfile" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,7 +20,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="5.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.9" />
-    <PackageReference Include="MongoDB.Driver" Version="2.12.3" />
     <PackageReference Include="RabbitMQ.Client" Version="6.2.1" />
     <PackageReference Include="Thoth.Json.Net" Version="5.0.0" />
   </ItemGroup>
