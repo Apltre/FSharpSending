@@ -6,7 +6,8 @@ open System
 open System.Reflection
 open System.Linq
 open Microsoft.Extensions.DependencyInjection
-open Newtonsoft.Json
+open System.Text.Json
+open System.Threading.Tasks
 
     type Operation = {
         Method: MethodInfo
@@ -43,15 +44,21 @@ open Newtonsoft.Json
 
     let processJob (insertInQueueQueue: ToQueueBusQueueFunc) (serviceProvider: IServiceProvider) (job: Job) : Async<Result<_, DomainError>> = async {
         let operationResult = getOperation job.SendingInfo.Type
-        let getArgs (operation: Operation) (job: Job) =
-            match operation.ArgType != typeof string with
-            | false -> job.Data
-            | true -> JsonConvert.DeserializeObject job.Data operation.argType
+        let getArg (argType: Type) (jobData: string option) =
+            match jobData with
+            | None -> null
+            | Some jobData' ->
+                match argType <> typeof<string> with
+                | false -> job.SendingInfo.Data :> Object
+                | true ->  (JsonSerializer.Deserialize jobData' argType) :> Object
 
         match operationResult with
         | Result.Error err -> return Result.Error err
         | Result.Ok operation ->
             use scope = serviceProvider.CreateScope()
             let controller = scope.ServiceProvider.GetRequiredService operation.ControllerType
-            result! operation.Method.InvokeAsync controller arg |> Async.AwaitTask
+            let args = [| getArg operation.ArgType job.SendingInfo.Data|]
+            let! result  = operation.Method.Invoke (controller, args) :?> Task<Object>
+                           |> Async.AwaitTask
+            result (Result.Ok result)
     }
