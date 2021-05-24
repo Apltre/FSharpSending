@@ -10,6 +10,8 @@ open FSharpSending.Sending.Stores.JobMessageBus
 open RabbitMQ.Client
 open FSharpSending.Common.Types.CommonTypes
 open FSharpSending.Sending.RabbitMQ
+open FSharpSending.Sending.Controllers
+open System.Net.Http
 
 module Startup =
     type IServiceCollection with
@@ -29,3 +31,7 @@ module Startup =
                 let logger = serviceProvider.GetRequiredService<ILogger>()
                 Logger.createLogger logger
                ) |> ignore
+
+            services.AddHttpClient<AgentsController>(fun serviceProvider (client : HttpClient) -> 
+                client.BaseAddress <- new Uri(config.["Agents:Url"])        
+            )

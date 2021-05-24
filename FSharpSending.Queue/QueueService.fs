@@ -18,13 +18,19 @@ type QueueService(configuration : IConfiguration, busStore: MessageBusStore, job
 
     let sentConsumer (GetSendingBusConsumerFunc sentConsumer) (jobStore : DbJobStore) =
          let sentJobHandler = SentJobHandling.handleSentJob  busStore.enqueueToResult jobStore.addJob  jobStore.updateJob
-         let handler = JsonDecoder.decode >> Result.bind sentJobHandler      
-         sentConsumer handler
+         let handlerAsync message = async {
+            let handler = JsonDecoder.decode >> Result.bind sentJobHandler
+            return handler message
+         }
+         sentConsumer handlerAsync
 
     let resultConsumer (GetResultsBusConsumerFunc sentConsumer) (updateJob: UpdateJobFunc) =
          let resultJobHandler = JobResultHandling.handleResultJob  updateJob
-         let handler = JsonDecoder.decode >> Result.bind resultJobHandler      
-         sentConsumer handler
+         let handlerAsync message = async {
+            let handler = JsonDecoder.decode >> Result.bind resultJobHandler
+            return handler message
+         }
+         sentConsumer handlerAsync
 
     let service (loggerStore : LoggerStore) (busStore: MessageBusStore) (jobStore : DbJobStore) (workflowId: WorkflowId) =
         let logInfo = initlogInfo (loggerStore.logMessage)

@@ -16,10 +16,13 @@ type SendingService(configuration : IConfiguration, busStore: MessageBusStore, l
         logInfo message
 
     let sendingConsumer (GetSendingBusConsumerFunc sendConsumer) =
-         let jobHandler = JobProcessor.processJob  busStore.enqueueToQueue
-         let handler = JsonDecoder.decode >> Result.bind jobHandler      
-         sendConsumer handler
-
+        let jobHandler = JobProcessor.processJob  busStore.enqueueToQueue
+        let handlerAsync message = async {
+           let handler = JsonDecoder.decode >> Result.bind jobHandler
+           return handler message
+        }
+        sendConsumer handlerAsync
+        ()
     let service (loggerStore : LoggerStore) (busStore: MessageBusStore) (workflowId: WorkflowId) =
         let logInfo = initlogInfo (loggerStore.logMessage)
         logInfo $"Service Id = {workflowId} started."
