@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Helpers\Pipe\Pipe.fs" />
     <Compile Include="Types\CommonTypes.fs" />
     <Content Include="Settings\appsettings.Agents.Development.json" />
     <Content Include="Settings\appsettings.Agents.json" />
@@ -19,7 +20,6 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Compile Include="Helpers\Signal\Signal.fs" />
-    <Compile Include="Helpers\Pipe\Pipe.fs" />
     <Compile Include="Helpers\Result\Result.fs" />
     <Compile Include="Helpers\Json\Decoder.fs" />
     <Compile Include="Helpers\Common\CommonHelper.fs" />

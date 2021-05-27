@@ -10,18 +10,15 @@ open System
 open FSharpSending.Sending.Stores.JobMessageBus
 open FSharpSending.Common.Helpers.Json
 
-type SendingService(configuration : IConfiguration, busStore: MessageBusStore, loggerStore: LoggerStore) =  
+type SendingService(configuration : IConfiguration, busStore: MessageBusStore, loggerStore: LoggerStore, serviceProvider: IServiceProvider) =  
 
     let initlogInfo (LogInfoFunc logInfo) message =
         logInfo message
 
-    let sendingConsumer (GetSendingBusConsumerFunc sendConsumer) =
-        let jobHandler = JobProcessor.processJob  busStore.enqueueToQueue
-        let handlerAsync message = async {
-           let handler = JsonDecoder.decode >> Result.bind jobHandler
-           return handler message
-        }
-        sendConsumer handlerAsync
+    let sendingConsumer (GetSendingBusConsumerFunc sendConsumer) (serviceProvider : IServiceProvider) =
+        let jobHandler = JobProcessor.processJob  busStore.enqueueToQueue serviceProvider
+        let handler = JsonDecoder.decode >> (Result.bindToAsync jobHandler)
+        sendConsumer handler
         ()
     let service (loggerStore : LoggerStore) (busStore: MessageBusStore) (workflowId: WorkflowId) =
         let logInfo = initlogInfo (loggerStore.logMessage)

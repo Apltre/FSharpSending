@@ -100,6 +100,7 @@ module CommonTypes =
 
     type DomainError =
         | Error of string
+        | ErrorExn of Exception
         | JsonSerializationFail of string
         | DbUpdateFailExn of Exception
         | DbQueryFailExn of Exception

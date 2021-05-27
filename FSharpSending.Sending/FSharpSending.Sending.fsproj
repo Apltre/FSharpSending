@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="SendingTypes.fs" />
     <Compile Include="Agents.fs" />
     <Compile Include="Controllers\AgentsController.fs" />
     <Compile Include="Stores.fs" />

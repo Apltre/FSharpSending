@@ -1,12 +1,15 @@
 ﻿module AgentsModule
 
 open System.Net.Http
-open FSharpSending.Common.Types.CommonTypes
+open System
+open SendingTypes
+
     type AgentsData = {
         message: string
     }
 
-    let SendOrders (client: HttpClient) (data: AgentsData) : Async<Result<unit, string>> = async {
-         return (Result.Error "")
+    let SendOrders (client: HttpClient) (data: AgentsData) : Async<Result<Object, SendingError>> = async {
+         // do smth
+         return Result.Ok(null)
     }
 

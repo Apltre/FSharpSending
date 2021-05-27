@@ -7,7 +7,7 @@ open System.Reflection
 open System.Linq
 open Microsoft.Extensions.DependencyInjection
 open System.Text.Json
-open System.Threading.Tasks
+open SendingTypes
 
     type Operation = {
         Method: MethodInfo
@@ -42,7 +42,7 @@ open System.Threading.Tasks
                             ArgType = methodInfo.GetParameters().Single().ParameterType
                         })
 
-    let processJob (insertInQueueQueue: ToQueueBusQueueFunc) (serviceProvider: IServiceProvider) (job: Job) : Async<Result<_, DomainError>> = async {
+    let runAsync (serviceProvider: IServiceProvider) (job: Job) : Async<Result<Object, SendingError>> = async {
         let operationResult = getOperation job.SendingInfo.Type
         let getArg (argType: Type) (jobData: string option) =
             match jobData with
@@ -53,12 +53,32 @@ open System.Threading.Tasks
                 | true ->  (JsonSerializer.Deserialize jobData' argType) :> Object
 
         match operationResult with
-        | Result.Error err -> return Result.Error err
+        | Result.Error err -> return Result.Error (SendingError.CriticalFail (err :> Object))
         | Result.Ok operation ->
             use scope = serviceProvider.CreateScope()
             let controller = scope.ServiceProvider.GetRequiredService operation.ControllerType
             let args = [| getArg operation.ArgType job.SendingInfo.Data|]
-            let! result  = operation.Method.Invoke (controller, args) :?> Task<Object>
-                           |> Async.AwaitTask
-            result (Result.Ok result)
+            return! operation.Method.Invoke (controller, args) :?> Async<Result<Object, SendingError>>
+    }
+
+    let processJob (ToQueueBusQueueFunc insertInQueueQueue) (serviceProvider: IServiceProvider) (job: Job) : Async<Result<unit, DomainError>> = async {
+        try
+            let! result = runAsync serviceProvider job
+            let changeJobStatus job jobStatus message  =
+                insertInQueueQueue { job with SendingInfo = { job.SendingInfo with Status = jobStatus
+                                                                                   Message = Some (JsonSerializer.Serialize message)
+                                                                                   ProcessedDate = Some DateTime.Now
+                                    }}
+            match result with
+            | Ok x -> return Ok (changeJobStatus job JobStatus.FinishedSuccessfully x)
+            | Result.Error err -> 
+                match err with
+                | LogicalFail lf -> 
+                    return Ok (changeJobStatus job JobStatus.UnresendableError lf)
+                | CriticalFail cf -> 
+                    return Ok (changeJobStatus job JobStatus.FatalError cf)
+                | TemporaryFail tf -> 
+                    return Ok (changeJobStatus job JobStatus.ResendableError tf)
+        with 
+        | ex -> return Result.Error (DomainError.ErrorExn ex)
     }
