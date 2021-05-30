@@ -1,6 +1,7 @@
 ﻿namespace FSharpSending.Common.Types
 
 open System
+open Thoth.Json.Net
 
 module CommonTypes =
     type JobStatus =
@@ -91,12 +92,6 @@ module CommonTypes =
     type UnsentJob = UnsentJob of Job
     type UnhandledResultJob = UnhandledResultJob of Job
     type HandledResultJob = HandledResultJob of Job
- 
-  //  type DomainJob =
-    //    | UnsentJob of UnsentJob
-      //  | SentJob of SentJob 
-      //  | UnhandledResultJob of UnhandledResultJob 
-       // | HandledResultJob of HandledResultJob
 
     type DomainError =
         | Error of string
@@ -109,23 +104,44 @@ module CommonTypes =
         | MessageQueueConsumeFailExn of Exception
         | MessageQueueConsumeFail of string
 
-//open CommonTypes
+open CommonTypes
 
-//module JobConverter = 
-//    let ofJson : Decoder<Job> =
- //       Decode.object(fun fields -> {
-//            Id = fields.Optional.At ["id"] Decode.string
-  ///          Data = fields.Optional.At ["data"] Decode.string
-     //       Type = fields.Required.At ["sendingType"] (Decode.Auto.generateDecoder<SendingType> (CaseStrategy.SnakeCase))
-     //       Status = fields.Optional.At ["status"] (Decode.Auto.generateDecoder<JobStatus> (CaseStrategy.SnakeCase))
-        //    AttemptNumber = fields.Required.At ["attemptNumber"] Decode.int
-      //      ExecuteMessage = fields.Optional.At ["executeMessage"] Decode.string
-          //  StartTime = fields.Required.At ["startTime"] Decode.datetime
-        //    CreateTime = fields.Required.At ["createTime"] Decode.datetime
- //           ProcessedDate = fields.Optional.At ["processedDate"] Decode.datetime
-   //         ResultHandlingStatus = fields.Optional.At ["processedDate"] Decode.int
-     //       ResultHandlingStartTime = fields.Optional.At ["resultHandlingStartTime"] Decode.datetime
-       //     ResultHandlingAttemptIndex = fields.Required.At ["resultHandlingAttemptIndex"] Decode.int
-         //   ResultHandlingException = fields.Optional.At ["resultHandlingException"] Decode.string
-        //})
+
+//Type : SendingType
+//Status : JobStatus
+//AttemptNumber : AttemptNumber
+
+module SendingInfoConverter = 
+    let ofJson : Decoder<SendingInfo> =
+        Decode.object(fun fields -> { 
+            Data = fields.Optional.At ["Data"] Decode.string
+            Type = fields.Required.At ["Type"] (Decode.Auto.generateDecoder<SendingType> (CaseStrategy.PascalCase))
+            Status = fields.Required.At ["Status"] (Decode.Auto.generateDecoder<JobStatus> (CaseStrategy.PascalCase))
+            AttemptNumber = fields.Required.At ["AttemptNumber"] (Decode.Auto.generateDecoder<AttemptNumber> (CaseStrategy.PascalCase))
+            Message = fields.Optional.At ["Message"] Decode.string
+            CreateTime = fields.Required.At ["CreateTime"] Decode.datetime
+            StartTime = fields.Required.At ["CreateTime"] Decode.datetime
+            ProcessedDate = fields.Optional.At ["ProcessedDate"] Decode.datetime
+        })
+
+//ResultHandlingAttemptNumber : AttemptNumber
+//ResultHandlingStatus : JobResultHandlingStatus option
+
+module ResultHandlingInfoConverter = 
+    let ofJson : Decoder<ResultHandlingInfo> =
+        Decode.object(fun fields -> { 
+            ResultHandlingAttemptNumber = fields.Required.At ["ResultHandlingAttemptNumber"] (Decode.Auto.generateDecoder<AttemptNumber> (CaseStrategy.PascalCase))
+            ResultHandlingStatus = fields.Optional.At ["ResultHandlingStatus"] (Decode.Auto.generateDecoder<JobResultHandlingStatus> (CaseStrategy.PascalCase))
+            ResultHandlingStartDate = fields.Optional.At ["ResultHandlingStartDate"] Decode.datetime
+            ResultHandlingProcessedDate = fields.Optional.At ["ResultHandlingProcessedDate"] Decode.datetime
+            ResultHandlingMessage = fields.Optional.At ["ResultHandlingMessage"] Decode.string
+        })
+
+module JobConverter = 
+    let ofJson : Decoder<Job> =
+        Decode.object(fun fields -> {
+            Id = fields.Optional.At ["Id"] (Decode.Auto.generateDecoder<JobId> (CaseStrategy.PascalCase))
+            SendingInfo = fields.Required.At ["SendingInfo"] SendingInfoConverter.ofJson
+            ResultHandlingInfo = fields.Required.At ["ResultHandlingInfo"] ResultHandlingInfoConverter.ofJson
+        })
         
