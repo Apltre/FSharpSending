@@ -30,33 +30,31 @@ module RabbitQueueConsumer =
 
     let consumeActor (channel: IModel) (logError: LogErrorFunc) (handler: string -> Async<Result<unit, DomainError>>) = MailboxProcessor.Start(fun (inbox: MailboxProcessor<BasicDeliverEventArgs>) ->
         let acknowledgeFailedTags = new Dictionary<uint64, DateTime>()
-        let handle = consumedHandler handler logError
-        let log = log logError
+        let handle' = consumedHandler handler logError
+        let log' = log logError
 
         let rec messageLoop cleanDate = async {
-           let! msgOption = inbox.TryReceive(60000)
-           match msgOption with
-           | None -> ()
-           | Some msg ->  match msg.Redelivered with
-                          | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
+            let! msgOption = inbox.TryReceive(60000)
+            match msgOption with
+            | None -> ()
+            | Some msg ->  match msg.Redelivered with
+                            | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
                                     | true -> ()
-                                    | false -> do! handle msg.Body
-                          | false -> do! handle msg.Body
-                          try
+                                    | false -> do! handle' msg.Body
+                            | false -> do! handle' msg.Body
+                           try
                                 channel.BasicAck (msg.DeliveryTag, false)
                                 match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
                                 | false -> ()
                                 | true -> acknowledgeFailedTags.Remove(msg.DeliveryTag) |> ignore          
-                          with exn ->  match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
-                                       | false -> acknowledgeFailedTags.Add(msg.DeliveryTag, DateTime.Now)
-                                       | true -> ()
-                                       log (MessageQueueConsumeFailExn exn)
-
-           match cleanDate >= DateTime.Now with
-           | true -> return! messageLoop cleanDate
-           | false -> handleLostMessages logError acknowledgeFailedTags
-                      return! messageLoop (DateTime.Now.AddMinutes(2.0))                
-
+                           with exn ->  match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
+                                        | false -> acknowledgeFailedTags.Add(msg.DeliveryTag, DateTime.Now)
+                                        | true -> ()
+                                        log' (MessageQueueConsumeFailExn exn)
+            match cleanDate >= DateTime.Now with
+            | true -> return! messageLoop cleanDate
+            | false -> handleLostMessages logError acknowledgeFailedTags
+                       return! messageLoop (DateTime.Now.AddMinutes(2.0))                
         }
         messageLoop (DateTime.Now.AddMinutes(2.0))
         )

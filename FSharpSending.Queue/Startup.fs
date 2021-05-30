@@ -45,7 +45,7 @@ module Startup =
             services.AddSingleton<MessageBusStore>(fun serviceProvider ->
                 let rabbitConnection = serviceProvider.GetRequiredService<IConnection>()
                 let loggerStore = serviceProvider.GetRequiredService<LoggerStore>()
-                let workflowId = WorkflowId (Convert.ToInt32 config.["Id"])
+                let workflowId = WorkflowId (Convert.ToInt32 config.["WorkflowId"])
                 RabbitJobStore.createRabbitJobStore rabbitConnection workflowId loggerStore.logError
             ) |> ignore
 

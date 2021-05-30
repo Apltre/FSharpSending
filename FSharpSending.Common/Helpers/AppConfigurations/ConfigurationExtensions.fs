@@ -7,11 +7,11 @@ module ConfigurationExtensions =
     let private addSettingFiles environment receiver (config : IConfigurationBuilder)  =
         let receiverEnv = 
             match environment <> "Production" with
-            | true -> String.Empty
-            | false -> $".{environment}"
+            | false -> String.Empty
+            | true -> $".{environment}"
         config.AddJsonFile("Settings/appsettings.json")
-            .AddJsonFile($"Settings/appsettings.{environment}.json", true)
-            .AddJsonFile($"Settings/appsettings.{receiver}{receiverEnv}.json")    
+              .AddJsonFile($"Settings/appsettings.{environment}.json", true)
+              .AddJsonFile($"Settings/appsettings.{receiver}{receiverEnv}.json") |> ignore  
     
  
     type Microsoft.Extensions.Hosting.IHostBuilder with

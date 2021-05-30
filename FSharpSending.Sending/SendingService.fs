@@ -24,7 +24,7 @@ type SendingService(configuration : IConfiguration, busStore: MessageBusStore, l
         let logInfo = initlogInfo (loggerStore.logMessage)
         logInfo $"Service Id = {workflowId} started."
         busStore.initializeQueues ()      
-        sendingConsumer busStore.getSendingConsumer
+        sendingConsumer busStore.getSendingConsumer serviceProvider
 
     interface IHostedService with
         member this.StartAsync (cancellationToken : CancellationToken) =
