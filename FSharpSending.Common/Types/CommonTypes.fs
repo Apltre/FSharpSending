@@ -106,15 +106,15 @@ module CommonTypes =
 
 open CommonTypes
 
+module JobIdConverter =
+    let ofJson : Decoder<JobId> =
+          Decode.string
+          |> Decode.andThen (fun x -> Decode.succeed (JobId x))
+
 module AttemptNumberConverter =
     let ofJson : Decoder<AttemptNumber> =
-        Decode.map (fun x -> AttemptNumberModule.ofInt x)
-                   (Decode.field "AttemptNumber" Decode.int)
-        
-
-//Type : SendingType
-//Status : JobStatus
-//AttemptNumber : AttemptNumber
+        Decode.int
+        |> Decode.andThen (fun x ->  Decode.succeed (AttemptNumberModule.ofInt x))
 
 module SendingInfoConverter = 
     let ofJson : Decoder<SendingInfo> =
@@ -129,9 +129,6 @@ module SendingInfoConverter =
             ProcessedDate = fields.Optional.At ["ProcessedDate"] Decode.datetime
         })
 
-//ResultHandlingAttemptNumber : AttemptNumber
-//ResultHandlingStatus : JobResultHandlingStatus option
-
 module ResultHandlingInfoConverter = 
     let ofJson : Decoder<ResultHandlingInfo> =
         Decode.object(fun fields -> { 
@@ -145,7 +142,7 @@ module ResultHandlingInfoConverter =
 module JobConverter = 
     let ofJson : Decoder<Job> =
         Decode.object(fun fields -> {
-            Id = fields.Optional.At ["Id"] (Decode.Auto.generateDecoder<JobId> (CaseStrategy.PascalCase))
+            Id = fields.Optional.At ["Id"]  JobIdConverter.ofJson
             SendingInfo = fields.Required.At ["SendingInfo"] SendingInfoConverter.ofJson
             ResultHandlingInfo = fields.Required.At ["ResultHandlingInfo"] ResultHandlingInfoConverter.ofJson
         })
