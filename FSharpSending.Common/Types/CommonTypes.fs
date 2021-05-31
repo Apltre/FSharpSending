@@ -106,6 +106,11 @@ module CommonTypes =
 
 open CommonTypes
 
+module AttemptNumberConverter =
+    let ofJson : Decoder<AttemptNumber> =
+        Decode.map (fun x -> AttemptNumberModule.ofInt x)
+                   (Decode.field "AttemptNumber" Decode.int)
+        
 
 //Type : SendingType
 //Status : JobStatus
@@ -117,7 +122,7 @@ module SendingInfoConverter =
             Data = fields.Optional.At ["Data"] Decode.string
             Type = fields.Required.At ["Type"] (Decode.Auto.generateDecoder<SendingType> (CaseStrategy.PascalCase))
             Status = fields.Required.At ["Status"] (Decode.Auto.generateDecoder<JobStatus> (CaseStrategy.PascalCase))
-            AttemptNumber = fields.Required.At ["AttemptNumber"] (Decode.Auto.generateDecoder<AttemptNumber> (CaseStrategy.PascalCase))
+            AttemptNumber = fields.Required.At ["AttemptNumber"] AttemptNumberConverter.ofJson
             Message = fields.Optional.At ["Message"] Decode.string
             CreateTime = fields.Required.At ["CreateTime"] Decode.datetime
             StartTime = fields.Required.At ["CreateTime"] Decode.datetime
@@ -130,7 +135,7 @@ module SendingInfoConverter =
 module ResultHandlingInfoConverter = 
     let ofJson : Decoder<ResultHandlingInfo> =
         Decode.object(fun fields -> { 
-            ResultHandlingAttemptNumber = fields.Required.At ["ResultHandlingAttemptNumber"] (Decode.Auto.generateDecoder<AttemptNumber> (CaseStrategy.PascalCase))
+            ResultHandlingAttemptNumber = fields.Required.At ["ResultHandlingAttemptNumber"] AttemptNumberConverter.ofJson
             ResultHandlingStatus = fields.Optional.At ["ResultHandlingStatus"] (Decode.Auto.generateDecoder<JobResultHandlingStatus> (CaseStrategy.PascalCase))
             ResultHandlingStartDate = fields.Optional.At ["ResultHandlingStartDate"] Decode.datetime
             ResultHandlingProcessedDate = fields.Optional.At ["ResultHandlingProcessedDate"] Decode.datetime
