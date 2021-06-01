@@ -4,8 +4,8 @@ open System.Net.Http
 open AgentsModule
 
 type AgentsController(client: HttpClient) =
-    member __.SendOrders (data: AgentsData) = async {
-       return! SendOrders client data
+    member __.SendOrder (data: AgentsData) = async {
+       return! SendOrder client data
     }
 
     //... other controller methods for reflection invokation 

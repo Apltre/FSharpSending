@@ -32,6 +32,6 @@ module Startup =
                 Logger.createLogger logger
                ) |> ignore
 
-            services.AddHttpClient<AgentsController>(fun serviceProvider (client : HttpClient) -> 
-                client.BaseAddress <- new Uri(config.["Agents:Url"])        
+            services.AddHttpClient<AgentsController>(fun serviceProvider (client : HttpClient) ->
+                client.BaseAddress <- new Uri(config.["Agents:Url"])      
             )

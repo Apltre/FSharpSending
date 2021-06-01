@@ -31,7 +31,7 @@ module RabbitJobStore =
         let actor = getActor (connection.CreateModel ()) logError
 
         {
-            enqueueToQueue = ToQueueBusQueueFunc (enqueue actor (QueueNames.getQueueToResultsName workflowId)) 
+            enqueueToQueue = ToQueueBusQueueFunc (enqueue actor (QueueNames.getSendingToQueueName workflowId)) 
             getSendingConsumer = GetSendingBusConsumerFunc (RabbitQueueConsumer.getNewQueueConsumer (connection.CreateModel ()) (QueueNames.getQueueToSendingName workflowId) logError)
             initializeQueues = initializeRabbitQueues workflowId (connection.CreateModel ()) 
         }

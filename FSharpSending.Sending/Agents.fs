@@ -8,7 +8,7 @@ open SendingTypes
         message: string
     }
 
-    let SendOrders (client: HttpClient) (data: AgentsData) : Async<Result<Object, SendingError>> = async {
+    let SendOrder (client: HttpClient) (data: AgentsData) : Async<Result<Object, SendingError>> = async {
          // do smth
          return Result.Ok(null)
     }

@@ -65,20 +65,22 @@ open SendingTypes
         try
             let! result = runAsync serviceProvider job
             let changeJobStatus job jobStatus message  =
-                insertInQueueQueue { job with SendingInfo = { job.SendingInfo with Status = jobStatus
-                                                                                   Message = Some (JsonSerializer.Serialize message)
-                                                                                   ProcessedDate = Some DateTime.Now
-                                    }}
+                 { job with SendingInfo = { job.SendingInfo with Status = jobStatus
+                                                                 Message = Some (JsonSerializer.Serialize message)
+                                                                 ProcessedDate = Some DateTime.Now
+                 }}
+            let changeAndQueue job jobStatus message =
+                insertInQueueQueue (changeJobStatus job jobStatus message)
             match result with
-            | Ok x -> return Ok (changeJobStatus job JobStatus.FinishedSuccessfully x)
+            | Ok x -> return Ok (changeAndQueue job JobStatus.FinishedSuccessfully x)
             | Result.Error err -> 
                 match err with
                 | LogicalFail lf -> 
-                    return Ok (changeJobStatus job JobStatus.UnresendableError lf)
+                    return Ok (changeAndQueue job JobStatus.UnresendableError lf)
                 | CriticalFail cf -> 
-                    return Ok (changeJobStatus job JobStatus.FatalError cf)
+                    return Ok (changeAndQueue job JobStatus.FatalError cf)
                 | TemporaryFail tf -> 
-                    return Ok (changeJobStatus job JobStatus.ResendableError tf)
+                    return Ok (changeAndQueue job JobStatus.ResendableError tf)
         with 
         | ex -> return Result.Error (DomainError.ErrorExn ex)
     }

@@ -111,10 +111,15 @@ module JobIdConverter =
           Decode.string
           |> Decode.andThen (fun x -> Decode.succeed (JobId x))
 
+    let toJson (JobId jobId) = Encode.string jobId
+    
+
 module AttemptNumberConverter =
     let ofJson : Decoder<AttemptNumber> =
         Decode.int
         |> Decode.andThen (fun x ->  Decode.succeed (AttemptNumberModule.ofInt x))
+
+    let toJson (attemptNumber: AttemptNumber) = Encode.int (AttemptNumberModule.toInt attemptNumber)
 
 module SendingInfoConverter = 
     let ofJson : Decoder<SendingInfo> =
@@ -125,9 +130,22 @@ module SendingInfoConverter =
             AttemptNumber = fields.Required.At ["AttemptNumber"] AttemptNumberConverter.ofJson
             Message = fields.Optional.At ["Message"] Decode.string
             CreateTime = fields.Required.At ["CreateTime"] Decode.datetime
-            StartTime = fields.Required.At ["CreateTime"] Decode.datetime
+            StartTime = fields.Required.At ["StartTime"] Decode.datetime
             ProcessedDate = fields.Optional.At ["ProcessedDate"] Decode.datetime
         })
+
+    let toJson (sendingInfo: SendingInfo) =
+        Encode.object
+            [
+                "Data", Encode.option Encode.string sendingInfo.Data
+                "Type", Encode.Enum.int sendingInfo.Type
+                "Status", Encode.Enum.int sendingInfo.Status
+                "AttemptNumber", AttemptNumberConverter.toJson sendingInfo.AttemptNumber
+                "Message", Encode.option Encode.string sendingInfo.Message
+                "CreateTime", Encode.datetime sendingInfo.CreateTime
+                "StartTime", Encode.datetime sendingInfo.StartTime
+                "ProcessedDate", Encode.option Encode.datetime sendingInfo.ProcessedDate
+            ]
 
 module ResultHandlingInfoConverter = 
     let ofJson : Decoder<ResultHandlingInfo> =
@@ -139,6 +157,16 @@ module ResultHandlingInfoConverter =
             ResultHandlingMessage = fields.Optional.At ["ResultHandlingMessage"] Decode.string
         })
 
+    let toJson (resultHandlingInfo: ResultHandlingInfo) =
+        Encode.object
+            [
+                "ResultHandlingAttemptNumber", AttemptNumberConverter.toJson resultHandlingInfo.ResultHandlingAttemptNumber
+                "ResultHandlingStatus", Encode.option Encode.Enum.int resultHandlingInfo.ResultHandlingStatus
+                "ResultHandlingStartDate", Encode.option Encode.datetime resultHandlingInfo.ResultHandlingStartDate
+                "ResultHandlingProcessedDate", Encode.option Encode.datetime resultHandlingInfo.ResultHandlingProcessedDate
+                "ResultHandlingMessage", Encode.option Encode.string resultHandlingInfo.ResultHandlingMessage
+            ]
+
 module JobConverter = 
     let ofJson : Decoder<Job> =
         Decode.object(fun fields -> {
@@ -146,4 +174,12 @@ module JobConverter =
             SendingInfo = fields.Required.At ["SendingInfo"] SendingInfoConverter.ofJson
             ResultHandlingInfo = fields.Required.At ["ResultHandlingInfo"] ResultHandlingInfoConverter.ofJson
         })
+
+    let toJson (job: Job) =
+        Encode.object
+            [
+                "Id", Encode.option JobIdConverter.toJson job.Id
+                "SendingInfo", SendingInfoConverter.toJson job.SendingInfo
+                "ResultHandlingInfo", ResultHandlingInfoConverter.toJson job.ResultHandlingInfo
+            ]
         
