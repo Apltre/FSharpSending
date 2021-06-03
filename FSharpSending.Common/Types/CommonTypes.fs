@@ -1,6 +1,7 @@
 ﻿namespace FSharpSending.Common.Types
 
 open System
+open Thoth.Json.Net
 
 module CommonTypes =
     type JobStatus =
@@ -91,37 +92,94 @@ module CommonTypes =
     type UnsentJob = UnsentJob of Job
     type UnhandledResultJob = UnhandledResultJob of Job
     type HandledResultJob = HandledResultJob of Job
- 
-  //  type DomainJob =
-    //    | UnsentJob of UnsentJob
-      //  | SentJob of SentJob 
-      //  | UnhandledResultJob of UnhandledResultJob 
-       // | HandledResultJob of HandledResultJob
 
     type DomainError =
         | Error of string
+        | ErrorExn of Exception
         | JsonSerializationFail of string
         | DbUpdateFailExn of Exception
         | DbQueryFailExn of Exception
         | MessageQueueFailExn of Exception
+        | MessageQueueEnqueueFailExn of Exception
+        | MessageQueueConsumeFailExn of Exception
+        | MessageQueueConsumeFail of string
 
-//open CommonTypes
+open CommonTypes
 
-//module JobConverter = 
-//    let ofJson : Decoder<Job> =
- //       Decode.object(fun fields -> {
-//            Id = fields.Optional.At ["id"] Decode.string
-  ///          Data = fields.Optional.At ["data"] Decode.string
-     //       Type = fields.Required.At ["sendingType"] (Decode.Auto.generateDecoder<SendingType> (CaseStrategy.SnakeCase))
-     //       Status = fields.Optional.At ["status"] (Decode.Auto.generateDecoder<JobStatus> (CaseStrategy.SnakeCase))
-        //    AttemptNumber = fields.Required.At ["attemptNumber"] Decode.int
-      //      ExecuteMessage = fields.Optional.At ["executeMessage"] Decode.string
-          //  StartTime = fields.Required.At ["startTime"] Decode.datetime
-        //    CreateTime = fields.Required.At ["createTime"] Decode.datetime
- //           ProcessedDate = fields.Optional.At ["processedDate"] Decode.datetime
-   //         ResultHandlingStatus = fields.Optional.At ["processedDate"] Decode.int
-     //       ResultHandlingStartTime = fields.Optional.At ["resultHandlingStartTime"] Decode.datetime
-       //     ResultHandlingAttemptIndex = fields.Required.At ["resultHandlingAttemptIndex"] Decode.int
-         //   ResultHandlingException = fields.Optional.At ["resultHandlingException"] Decode.string
-        //})
+module JobIdConverter =
+    let ofJson : Decoder<JobId> =
+          Decode.string
+          |> Decode.andThen (fun x -> Decode.succeed (JobId x))
+
+    let toJson (JobId jobId) = Encode.string jobId
+    
+
+module AttemptNumberConverter =
+    let ofJson : Decoder<AttemptNumber> =
+        Decode.int
+        |> Decode.andThen (fun x ->  Decode.succeed (AttemptNumberModule.ofInt x))
+
+    let toJson (attemptNumber: AttemptNumber) = Encode.int (AttemptNumberModule.toInt attemptNumber)
+
+module SendingInfoConverter = 
+    let ofJson : Decoder<SendingInfo> =
+        Decode.object(fun fields -> { 
+            Data = fields.Optional.At ["Data"] Decode.string
+            Type = fields.Required.At ["Type"] (Decode.Auto.generateDecoder<SendingType> (CaseStrategy.PascalCase))
+            Status = fields.Required.At ["Status"] (Decode.Auto.generateDecoder<JobStatus> (CaseStrategy.PascalCase))
+            AttemptNumber = fields.Required.At ["AttemptNumber"] AttemptNumberConverter.ofJson
+            Message = fields.Optional.At ["Message"] Decode.string
+            CreateTime = fields.Required.At ["CreateTime"] Decode.datetime
+            StartTime = fields.Required.At ["StartTime"] Decode.datetime
+            ProcessedDate = fields.Optional.At ["ProcessedDate"] Decode.datetime
+        })
+
+    let toJson (sendingInfo: SendingInfo) =
+        Encode.object
+            [
+                "Data", Encode.option Encode.string sendingInfo.Data
+                "Type", Encode.Enum.int sendingInfo.Type
+                "Status", Encode.Enum.int sendingInfo.Status
+                "AttemptNumber", AttemptNumberConverter.toJson sendingInfo.AttemptNumber
+                "Message", Encode.option Encode.string sendingInfo.Message
+                "CreateTime", Encode.datetime sendingInfo.CreateTime
+                "StartTime", Encode.datetime sendingInfo.StartTime
+                "ProcessedDate", Encode.option Encode.datetime sendingInfo.ProcessedDate
+            ]
+
+module ResultHandlingInfoConverter = 
+    let ofJson : Decoder<ResultHandlingInfo> =
+        Decode.object(fun fields -> { 
+            ResultHandlingAttemptNumber = fields.Required.At ["ResultHandlingAttemptNumber"] AttemptNumberConverter.ofJson
+            ResultHandlingStatus = fields.Optional.At ["ResultHandlingStatus"] (Decode.Auto.generateDecoder<JobResultHandlingStatus> (CaseStrategy.PascalCase))
+            ResultHandlingStartDate = fields.Optional.At ["ResultHandlingStartDate"] Decode.datetime
+            ResultHandlingProcessedDate = fields.Optional.At ["ResultHandlingProcessedDate"] Decode.datetime
+            ResultHandlingMessage = fields.Optional.At ["ResultHandlingMessage"] Decode.string
+        })
+
+    let toJson (resultHandlingInfo: ResultHandlingInfo) =
+        Encode.object
+            [
+                "ResultHandlingAttemptNumber", AttemptNumberConverter.toJson resultHandlingInfo.ResultHandlingAttemptNumber
+                "ResultHandlingStatus", Encode.option Encode.Enum.int resultHandlingInfo.ResultHandlingStatus
+                "ResultHandlingStartDate", Encode.option Encode.datetime resultHandlingInfo.ResultHandlingStartDate
+                "ResultHandlingProcessedDate", Encode.option Encode.datetime resultHandlingInfo.ResultHandlingProcessedDate
+                "ResultHandlingMessage", Encode.option Encode.string resultHandlingInfo.ResultHandlingMessage
+            ]
+
+module JobConverter = 
+    let ofJson : Decoder<Job> =
+        Decode.object(fun fields -> {
+            Id = fields.Optional.At ["Id"]  JobIdConverter.ofJson
+            SendingInfo = fields.Required.At ["SendingInfo"] SendingInfoConverter.ofJson
+            ResultHandlingInfo = fields.Required.At ["ResultHandlingInfo"] ResultHandlingInfoConverter.ofJson
+        })
+
+    let toJson (job: Job) =
+        Encode.object
+            [
+                "Id", Encode.option JobIdConverter.toJson job.Id
+                "SendingInfo", SendingInfoConverter.toJson job.SendingInfo
+                "ResultHandlingInfo", ResultHandlingInfoConverter.toJson job.ResultHandlingInfo
+            ]
         

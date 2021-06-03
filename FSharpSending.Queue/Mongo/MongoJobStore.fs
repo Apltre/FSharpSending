@@ -5,6 +5,7 @@ open System
 open FSharpSending.Common.Types.CommonTypes
 open FSharpSending.Queue.Stores.DbJob
 open FSharpSending.Common.Helpers.Signal
+open System.Collections.Generic
 
 module MongoJobStore =
     let getPendingJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
@@ -27,6 +28,27 @@ module MongoJobStore =
             return jobs |> Seq.toList
                         |> List.map MongoJobModule.ofMongoJob 
         }        
+
+    let getStaleJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+        async {
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.BeingProcessed && job.StartTime <= DateTime.Now.AddHours(-2.0))
+                                      .SortBy(fun job -> job.Id :> Object)
+                                      .Limit(100)
+                                      .ToListAsync() |> Async.AwaitTask
+            return jobs  |> Seq.toList
+                         |> List.map MongoJobModule.ofMongoJob
+        }   
+
+    let getStaleResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+        async {
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.BeingProcessed 
+                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now.AddHours(-2.0))
+                                      .SortBy(fun job -> job.Id :> Object)
+                                      .Limit(100)
+                                      .ToListAsync() |> Async.AwaitTask
+            return jobs |> Seq.toList
+                        |> List.map MongoJobModule.ofMongoJob 
+        }    
 
     let addJobs (jobsCollection: IMongoCollection<MongoJob>) (jobs : Job list) = 
         async {
@@ -55,23 +77,24 @@ module MongoJobStore =
         let maxBatchSize = 150 // between 100..1000
         let getNewPersistDate () = DateTime.Now.Add (TimeSpan.FromMilliseconds 10.0)
 
-        let mapToList x =
-            x |> Map.toList 
-              |> List.map (fun (x, y) -> y)
+        let mapToList (map: Dictionary<JobId option, Job>) =
+            map 
+            |> Seq.map (fun keyValue -> keyValue.Value)
+            |> Seq.toList
 
-        let rec addRange (jobs: Job list) map  =
+        let rec addRange (jobs: Job list) (map: Dictionary<JobId option, Job>)  =
             match jobs with
-            | x::xs -> let newMap = Map.add x.Id x map
-                       addRange xs newMap
+            | x::xs -> map.[x.Id] <- x
+                       addRange xs map
             | [] -> map
 
 
-        let rec messageLoop jobsMap awaitersList persistDate waitMultiplier = async {
+        let rec messageLoop (jobsMap: Dictionary<JobId option, Job>) awaitersList persistDate waitMultiplier = async {
             let waitTime = minimalWaitMs * waitMultiplier
             let! msgOption = inbox.TryReceive(waitTime)
             match msgOption with
                 | Some ((jobs: Job list), (commitAwaiter: EmitCompletedSignalFunc option)) ->
-                    match (persistDate > DateTime.Now) && ((Map.count jobsMap) < maxBatchSize) with
+                    match (persistDate > DateTime.Now) && (jobsMap.Count < maxBatchSize) with
                     | true -> let newJobsMap = addRange jobs jobsMap 
                               match commitAwaiter with
                               | Some awaiter -> let newAwaitersList = awaiter :: awaitersList
@@ -81,9 +104,9 @@ module MongoJobStore =
                                                 |> addRange jobs
                                                 |> mapToList
                                do! persist listToSave
-                               return! messageLoop Map.empty List.empty (getNewPersistDate ()) 1
+                               return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
                                
-                | None -> match not jobsMap.IsEmpty with
+                | None -> match jobsMap.Count <> 0 with
                           | true -> do! persist (mapToList jobsMap)
                                     awaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
                           | false -> ()
@@ -91,10 +114,10 @@ module MongoJobStore =
                               match x < 5 with
                               | true -> x + 1
                               | false -> x   
-                          return! messageLoop Map.empty List.empty (getNewPersistDate ()) (getNewMultiplier waitMultiplier)
+                          return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) (getNewMultiplier waitMultiplier)
                             
         }
-        messageLoop Map.empty List.empty (getNewPersistDate ()) 1
+        messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
         )
 
     let enqueue (actor: MailboxProcessor<_>) (jobs: Job list) = 
@@ -118,6 +141,8 @@ module MongoJobStore =
         { 
             getPendingJobs = GetPendingJobsFunc (getPendingJobs jobsCollection)
             getPendingResultHandlingJobs = GetPendingResultHandlingJobsFunc (getPendingResultHandlingJobs jobsCollection)
+            getStaleJobs = GetStaleJobsFunc (getStaleJobs jobsCollection)
+            getStaleResultHandlingJobs = GetStaleResultHandlingJobsFunc (getStaleResultHandlingJobs jobsCollection)
             addJobs = AddJobsFunc enqueueJobsAdd
             addJob = AddJobFunc enqueueJobAdd
             updateJobs = UpdateJobsFunc enqueueJobsUpdate

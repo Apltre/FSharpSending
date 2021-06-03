@@ -5,21 +5,25 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Helpers\Pipe\Pipe.fs" />
     <Compile Include="Types\CommonTypes.fs" />
-    <Content Include="Settings\appsettings.Agents.Development.json" />
-    <Content Include="Settings\appsettings.Agents.json" />
+    <Content Include="Settings\appsettings.Agents.Development.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Settings\appsettings.Agents.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Settings\appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Content Include="Settings\appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Compile Include="Helpers\Signal\Signal.fs" />
-    <Compile Include="Helpers\Pipe\Pipe.fs" />
     <Compile Include="Helpers\Result\Result.fs" />
     <Compile Include="Helpers\Json\Decoder.fs" />
     <Compile Include="Helpers\Common\CommonHelper.fs" />
@@ -36,7 +40,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="5.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="RabbitMQ.Client" Version="6.2.1" />
     <PackageReference Include="Thoth.Json.Net" Version="5.0.0" />
   </ItemGroup>

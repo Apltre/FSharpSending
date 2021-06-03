@@ -6,8 +6,8 @@ open FSharpSending.Common.Helpers.Signal
 module JobMessageBus =
     type ToResultBusQueueFunc = ToResultBusQueueFunc of (Job -> unit)
     type ToSendingBusQueueFunc = ToSendingBusQueueFunc of (Job -> unit)
-    type GetResultsBusConsumerFunc = GetResultsBusConsumerFunc of ((string -> Result<unit, DomainError>) -> unit)
-    type GetSendingBusConsumerFunc = GetSendingBusConsumerFunc of ((string -> Result<unit, DomainError>) -> unit)
+    type GetResultsBusConsumerFunc = GetResultsBusConsumerFunc of ((string -> Async<Result<unit, DomainError>>) -> unit)
+    type GetSendingBusConsumerFunc = GetSendingBusConsumerFunc of ((string -> Async<Result<unit, DomainError>>) -> unit)
 
     type MessageBusStore = {
          enqueueToResult: ToResultBusQueueFunc
@@ -24,11 +24,15 @@ module DbJob =
     type UpdateJobFunc = UpdateJobFunc of (Job -> CompletedSignalAwaiter)
     type GetPendingJobsFunc = GetPendingJobsFunc of (unit -> Async<Job list>)
     type GetPendingResultHandlingJobsFunc = GetPendingResultHandlingJobsFunc of (unit -> Async<Job list>)
+    type GetStaleJobsFunc = GetStaleJobsFunc of (unit -> Async<Job list>)
+    type GetStaleResultHandlingJobsFunc = GetStaleResultHandlingJobsFunc of (unit -> Async<Job list>)
 
     type DbJobStore =
         { 
             getPendingJobs :  GetPendingJobsFunc
             getPendingResultHandlingJobs : GetPendingResultHandlingJobsFunc
+            getStaleJobs :  GetStaleJobsFunc
+            getStaleResultHandlingJobs : GetStaleResultHandlingJobsFunc
             addJobs : AddJobsFunc
             addJob : AddJobFunc
             updateJobs : UpdateJobsFunc

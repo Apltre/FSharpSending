@@ -14,11 +14,15 @@ type LoggerStore =
 
 let logError (logger : ILogger) (error : DomainError)  =
     match error with
+    | Error e -> logger.LogError e
+    | ErrorExn exn -> logger.LogError (exn, "")
     | JsonSerializationFail e -> logger.LogError e
-    | DbQueryFailExn exn -> logger.LogError(exn, "DbQueryFail!")
     | DbUpdateFailExn exn -> logger.LogError(exn, "DbUpdateFail!")
-    | Error e -> logger.LogError(e)
-    | MessageQueueFailExn exn -> logger.LogError(exn, "MessageQueueFail")
+    | DbQueryFailExn exn -> logger.LogError(exn, "DbQueryFail!")
+    | MessageQueueFailExn exn -> logger.LogError(exn, "MessageQueueFail!")
+    | MessageQueueEnqueueFailExn exn -> logger.LogError(exn, "MessageQueueEnqueueFail")
+    | MessageQueueConsumeFailExn exn -> logger.LogError(exn, "MessageQueueConsumeFail")
+    | MessageQueueConsumeFail e -> logger.LogError e
 
 let logMessage (logger : ILogger) message  =
    logger.LogInformation message
