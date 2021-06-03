@@ -6,8 +6,8 @@ open System
 open System.Reflection
 open System.Linq
 open Microsoft.Extensions.DependencyInjection
-open System.Text.Json
 open SendingTypes
+open Newtonsoft.Json
 
     type Operation = {
         Method: MethodInfo
@@ -50,7 +50,7 @@ open SendingTypes
             | Some jobData' ->
                 match argType <> typeof<string> with
                 | false -> job.SendingInfo.Data :> Object
-                | true ->  (JsonSerializer.Deserialize jobData' argType) :> Object
+                | true ->  JsonConvert.DeserializeObject (jobData', argType)
 
         match operationResult with
         | Result.Error err -> return Result.Error (SendingError.CriticalFail (err :> Object))
@@ -65,8 +65,11 @@ open SendingTypes
         try
             let! result = runAsync serviceProvider job
             let changeJobStatus job jobStatus message  =
+                 let message' = match message with
+                                | null -> None
+                                | _ -> Some (JsonConvert.SerializeObject message)
                  { job with SendingInfo = { job.SendingInfo with Status = jobStatus
-                                                                 Message = Some (JsonSerializer.Serialize message)
+                                                                 Message = message'
                                                                  ProcessedDate = Some DateTime.Now
                  }}
             let changeAndQueue job jobStatus message =

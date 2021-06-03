@@ -39,8 +39,8 @@ module RabbitQueueConsumer =
             | None -> ()
             | Some msg ->  match msg.Redelivered with
                             | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
-                                    | true -> ()
-                                    | false -> do! handle' msg.Body
+                                      | true -> ()
+                                      | false -> do! handle' msg.Body
                             | false -> do! handle' msg.Body
                            try
                                 channel.BasicAck (msg.DeliveryTag, false)
