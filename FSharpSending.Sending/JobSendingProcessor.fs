@@ -1,4 +1,4 @@
-﻿module JobProcessor
+﻿module JobSendingProcessor
 
 open FSharpSending.Common.Types.CommonTypes
 open FSharpSending.Sending.Stores.JobMessageBus
@@ -34,7 +34,7 @@ open Newtonsoft.Json
         | null -> Result.Error (DomainError.Error $"cannot find controller: {controllerFullName}")
         | _ -> let method = getMethod methodName
                match method  with
-               | None -> Result.Error (DomainError.Error $"Не найден ни один из методов ('{(asyncName methodName)}', '{methodName}')")
+               | None -> Result.Error (DomainError.Error $"No method found ('{(asyncName methodName)}', '{methodName}')")
                | Some methodInfo -> 
                     Ok ({
                             Method = methodInfo
@@ -72,18 +72,18 @@ open Newtonsoft.Json
                                                                  Message = message'
                                                                  ProcessedDate = Some DateTime.Now
                  }}
-            let changeAndQueue job jobStatus message =
+            let changeAndQueue jobStatus message =
                 insertInQueueQueue (changeJobStatus job jobStatus message)
             match result with
-            | Ok x -> return Ok (changeAndQueue job JobStatus.FinishedSuccessfully x)
+            | Ok x -> return Ok (changeAndQueue JobStatus.FinishedSuccessfully x)
             | Result.Error err -> 
                 match err with
                 | LogicalFail lf -> 
-                    return Ok (changeAndQueue job JobStatus.UnresendableError lf)
+                    return Ok (changeAndQueue JobStatus.UnresendableError lf)
                 | CriticalFail cf -> 
-                    return Ok (changeAndQueue job JobStatus.FatalError cf)
+                    return Ok (changeAndQueue JobStatus.FatalError cf)
                 | TemporaryFail tf -> 
-                    return Ok (changeAndQueue job JobStatus.ResendableError tf)
+                    return Ok (changeAndQueue JobStatus.ResendableError tf)
         with 
         | ex -> return Result.Error (DomainError.ErrorExn ex)
     }
