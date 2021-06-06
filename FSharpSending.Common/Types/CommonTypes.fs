@@ -93,7 +93,7 @@ module CommonTypes =
     type UnhandledResultJob = UnhandledResultJob of Job
     type HandledResultJob = HandledResultJob of Job
 
-    type DomainError =
+    type Errors =
         | Error of string
         | ErrorExn of Exception
         | JsonSerializationFail of string

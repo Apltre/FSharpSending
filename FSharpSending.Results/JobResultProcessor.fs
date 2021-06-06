@@ -27,7 +27,7 @@ open Microsoft.Extensions.DependencyInjection
             | JobStatus.ResendableError -> Ok $"{baseName}_HandleTemporaryError"
             | JobStatus.UnresendableError -> Ok $"{baseName}_HandleLogicalError"
             | JobStatus.FatalError -> Ok $"{baseName}_HandleFatalError"
-            | _ -> Result.Error (DomainError.Error "Unexpexted status")
+            | _ -> Result.Error (Errors.Error "Unexpexted status")
 
         let getMethod name =
             let asyncName name = 
@@ -39,11 +39,11 @@ open Microsoft.Extensions.DependencyInjection
             let method = getSyncMethod name
                          |> Option.orElseWith (fun () -> getAsyncMethod (asyncName name))
             match method with
-            | None -> Result.Error (DomainError.Error $"No method with name {name} found")
+            | None -> Result.Error (Errors.Error $"No method with name {name} found")
             | Some method -> Ok method
 
         match controllerType with
-        | null -> Result.Error (DomainError.Error $"cannot find controller: {controllerFullName}")
+        | null -> Result.Error (Errors.Error $"cannot find controller: {controllerFullName}")
         | _ -> let method = getControllerMethodName methodName jobStatus
                             |> Result.bind getMethod
                match method with
@@ -59,24 +59,36 @@ open Microsoft.Extensions.DependencyInjection
 
     let runAsync (serviceProvider: IServiceProvider) (job: Job) : Async<Result<Object, ResultsError>> = async {
         let operationResult = getOperation job.SendingInfo.Type job.SendingInfo.Status
-        let getArg (argType: Type) (jobData: string option) =
-            match jobData with
+        let getArgFromJson (argType: Type) (json: string option) =
+            match json with
             | None -> null
-            | Some jobData' ->
+            | Some json' ->
                 match argType <> typeof<string> with
                 | false -> job.SendingInfo.Data :> Object
-                | true ->  JsonConvert.DeserializeObject (jobData', argType)
+                | true ->  JsonConvert.DeserializeObject (json', argType)
+
+        let fillArgs (methodArgsTypes: Type list) json (args: Object list) =
+            match List.length methodArgsTypes with
+            | 1 -> Ok args
+            | 2 -> let secondArg = getArgFromJson methodArgsTypes.[1] json
+                   Ok (List.rev (secondArg :: args))
+            | _ -> Result.Error (Errors.Error $"Unexpected method args number.")
+            
 
         match operationResult with
         | Result.Error err -> return Result.Error (ResultsError.CriticalFail (err :> Object))
         | Result.Ok operation ->
             use scope = serviceProvider.CreateScope()
             let controller = scope.ServiceProvider.GetRequiredService operation.ControllerType
-            let args = [| getArg operation.ArgsTypes job.SendingInfo.Data|]
-            return! operation.Method.Invoke (controller, args) :?> Async<Result<Object, ResultsError>>
+            let argsResult = [ getArgFromJson operation.ArgsTypes.Head job.SendingInfo.Data ]
+                             |> fillArgs operation.ArgsTypes job.SendingInfo.Message
+                             |> Result.map List.toArray
+            match argsResult with
+            | Ok args -> return! operation.Method.Invoke (controller, args) :?> Async<Result<Object, ResultsError>>
+            | Result.Error err -> return (Result.Error err)
     }
 
-    let processJob (ToQueueBusQueueFunc insertInQueueQueue) (serviceProvider: IServiceProvider) (job: Job) : Async<Result<unit, DomainError>> = async {
+    let processJob (ToQueueBusQueueFunc insertInQueueQueue) (serviceProvider: IServiceProvider) (job: Job) : Async<ResuErrorsmainError>> = async {
         try
             let! result = runAsync serviceProvider job
             let changeJobStatus job jobResultStatus message  =
@@ -100,7 +112,7 @@ open Microsoft.Extensions.DependencyInjection
                 | CriticalFail cf -> 
                     return Ok (changeAndEnqueue JobResultHandlingStatus.FatalError cf)
                 | TemporaryFail tf ->
-                    return Ok (changeAndEnqueue JobResultHandlingStatus.Pending tf)
+                    return Ok (changeErrorsJobResultHandlingStatus.Pending tf)
         with 
         | ex -> return Result.Error (DomainError.ErrorExn ex)
     }

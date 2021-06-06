@@ -9,7 +9,7 @@ open System.Text
 open System.Collections.Generic
 
 module RabbitQueueConsumer =
-    let consumedHandler (handler: string -> Async<Result<unit, DomainError>>) (LogErrorFunc logError) (data:ReadOnlyMemory<byte>) = async {
+    let consumedHandler (handler: string -> Async<Result<unit, Errors>>) (LogErrorFunc logError) (data:ReadOnlyMemory<byte>) = async {
                let body = data.ToArray()
                let message = Encoding.UTF8.GetString body
                let! result = handler message
@@ -28,7 +28,7 @@ module RabbitQueueConsumer =
         |> Pipe.tee (List.iter(fun keyValue -> dictionary.Remove(keyValue.Key) |> ignore))
         |> List.iter (fun keyValue -> log (MessageQueueConsumeFail $"Job id = {keyValue.Key} wasnt acknowledged for two hours"))
 
-    let consumeActor (channel: IModel) (logError: LogErrorFunc) (handler: string -> Async<Result<unit, DomainError>>) = MailboxProcessor.Start(fun (inbox: MailboxProcessor<BasicDeliverEventArgs>) ->
+    let consumeActor (channel: IModel) (logError: LogErrorFunc) (handler: string -> Async<Result<unit, Errors>>) = MailboxProcessor.Start(fun (inbox: MailboxProcessor<BasicDeliverEventArgs>) ->
         let acknowledgeFailedTags = new Dictionary<uint64, DateTime>()
         let handle' = consumedHandler handler logError
         let log' = log logError
@@ -62,7 +62,7 @@ module RabbitQueueConsumer =
     let enqueue (actor: MailboxProcessor<_>) (message:BasicDeliverEventArgs) = 
         actor.Post message
 
-    let getNewQueueConsumer (rabbitChannel: IModel) queue (logError: LogErrorFunc) (handler: string -> Async<Result<unit, DomainError>>) = 
+    let getNewQueueConsumer (rabbitChannel: IModel) queue (logError: LogErrorFunc) (handler: string -> Async<Result<unit, Errors>>) = 
         let actor  = consumeActor rabbitChannel logError handler
         let enqueue message = enqueue actor message
         let consumer = new EventingBasicConsumer(rabbitChannel)

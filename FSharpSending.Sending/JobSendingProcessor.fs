@@ -31,10 +31,10 @@ open Newtonsoft.Json
             |> Option.orElseWith (fun () -> getAsyncMethod (asyncName name))
 
         match controllerType with
-        | null -> Result.Error (DomainError.Error $"cannot find controller: {controllerFullName}")
+        | null -> Result.Error (Errors.Error $"cannot find controller: {controllerFullName}")
         | _ -> let method = getMethod methodName
                match method  with
-               | None -> Result.Error (DomainError.Error $"No method found ('{(asyncName methodName)}', '{methodName}')")
+               | None -> Result.Error (Errors.Error $"No method found ('{(asyncName methodName)}', '{methodName}')")
                | Some methodInfo -> 
                     Ok ({
                             Method = methodInfo
@@ -61,7 +61,7 @@ open Newtonsoft.Json
             return! operation.Method.Invoke (controller, args) :?> Async<Result<Object, SendingError>>
     }
 
-    let processJob (ToQueueBusQueueFunc insertInQueueQueue) (serviceProvider: IServiceProvider) (job: Job) : Async<Result<unit, DomainError>> = async {
+    let processJob (ToQueueBusQueueFunc insertInQueueQueue) (serviceProvider: IServiceProvider) (job: Job) : Async<Result<unit, Errors>> = async {
         try
             let! result = runAsync serviceProvider job
             let changeJobStatus job jobStatus message  =
@@ -85,5 +85,5 @@ open Newtonsoft.Json
                 | TemporaryFail tf -> 
                     return Ok (changeAndQueue JobStatus.ResendableError tf)
         with 
-        | ex -> return Result.Error (DomainError.ErrorExn ex)
+        | ex -> return Result.Error (Errors.ErrorExn ex)
     }
