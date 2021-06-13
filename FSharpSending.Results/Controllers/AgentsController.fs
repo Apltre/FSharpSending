@@ -1,11 +1,19 @@
 ﻿namespace FSharpSending.Results.Controllers
-
-open System.Net.Http
 open AgentsModule
 
 type AgentsController() =
-    member __.SendOrder (data: AgentsData) = async {
-       return! SendOrder data
+    member __.SendOrder_HandleSuccessAsync (data: AgentsData) = async {
+        return! SendOrder_HandleSuccessAsync data
     }
 
-    //... other controller methods for reflection invokation 
+    member __.SendOrder_HandleLogicalErrorAsync (data: AgentsData) = async {
+        return! SendOrder_HandleLogicalErrorAsync data
+    }
+
+    member __.SendOrder_HandleFatalErrorAsync (data: AgentsData)= async {
+        return! SendOrder_HandleFatalErrorAsync data
+    }
+
+    member __.SendOrder_HandleTemporaryError (data: AgentsData) = async {
+        return! SendOrder_HandleTemporaryError data
+    }
