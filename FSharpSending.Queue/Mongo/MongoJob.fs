@@ -10,6 +10,7 @@ type MongoJob =
     {
         [<BsonId (IdGenerator = typeof<StringObjectIdGenerator>)>]
         Id : string
+        WorkflowId: int
         Data : BsonDocument
         Type : SendingType
         Status : JobStatus
@@ -36,6 +37,7 @@ module MongoJobModule =
 
         {
             Id =  job.Id |> JobId.unwrapOfOption
+            WorkflowId = job.WorkflowId |> WorkflowIdModule.toInt
             MongoJob.Data = (jsonToBsonDocument sendingInfo.Data BsonDocument.Parse) |> Option.toObj
             Type = sendingInfo.Type
             Status = sendingInfo.Status
@@ -57,6 +59,7 @@ module MongoJobModule =
                 | Some x -> Some (x.ToJson())
         {
             Id = job.Id |> JobId.wrapToOption
+            WorkflowId = job.WorkflowId |> WorkflowIdModule.ofInt
             SendingInfo = 
                 {
                     Data = bsonDocumentToJson (job.Data |> Option.ofObj)

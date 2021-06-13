@@ -11,7 +11,10 @@ module Program =
     let exitCode = 0
 
     let CreateHostBuilder args =
+        let dllPath = System.Reflection.Assembly.GetEntryAssembly().Location 
+        let contentRoot =  dllPath.Substring(0, dllPath.LastIndexOf(@"\") + 1)
         Host.CreateDefaultBuilder(args)
+            .UseContentRoot(contentRoot)
             .ConfigureHostConfiguration(fun configHost ->
                  configHost.AddCommandLine(args) |> ignore
                  )

@@ -20,6 +20,7 @@ module Startup =
             let services = __
 
             configureRabbit services config
+            let workflowId = WorkflowId (Convert.ToInt32 config.["WorkflowId"])
 
             services.AddSingleton(new MongoClient(config.GetConnectionString("Mongo"))) |> ignore
 
@@ -38,18 +39,17 @@ module Startup =
             ) |> ignore
 
             services.AddSingleton<DbJobStore>(fun serviceProvider ->
-                let collection = serviceProvider.GetRequiredService<IMongoCollection<MongoJob>>()
-                MongoJobStore.createMongoJobStore collection
+                let collection = serviceProvider.GetRequiredService<IMongoCollection<MongoJob>>()             
+                MongoJobStore.createMongoJobStore collection workflowId
             ) |> ignore
 
             services.AddSingleton<MessageBusStore>(fun serviceProvider ->
                 let rabbitConnection = serviceProvider.GetRequiredService<IConnection>()
                 let loggerStore = serviceProvider.GetRequiredService<LoggerStore>()
-                let workflowId = WorkflowId (Convert.ToInt32 config.["WorkflowId"])
                 RabbitJobStore.createRabbitJobStore rabbitConnection workflowId loggerStore.logError
             ) |> ignore
 
             services.AddSingleton<Logger.LoggerStore>(fun serviceProvider ->
-                let logger = serviceProvider.GetRequiredService<ILogger>()
+                let logger = serviceProvider.GetRequiredService<ILogger<LoggerStore>>()
                 Logger.createLogger logger
                ) |> ignore

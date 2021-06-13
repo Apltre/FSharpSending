@@ -1,11 +1,11 @@
-namespace FSharpSending.Sending
+namespace FSharpSending.Results
 
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open FSharpSending.Common.Helpers.AppConfigurations.ConfigurationExtensions
-open FSharpSending.Sending.Startup
+open FSharpSending.Results.Startup
 
 module Program =
     let exitCode = 0
@@ -20,7 +20,7 @@ module Program =
                  )
             .ConfigureSettingFiles()
             .ConfigureServices(fun hostContext services ->
-                    services.AddHostedService<SendingService>()
+                    services.AddHostedService<ResultsService>()
                             .ConfigureServices hostContext.Configuration |> ignore
                 )
             .ConfigureLogging(fun context logging -> 

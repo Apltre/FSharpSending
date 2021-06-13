@@ -3,7 +3,7 @@
 open Microsoft.Extensions.Logging
 open FSharpSending.Common.Types.CommonTypes
 
-type LogErrorFunc = LogErrorFunc of (DomainError -> unit)
+type LogErrorFunc = LogErrorFunc of (Errors -> unit)
 type LogInfoFunc = LogInfoFunc of (string -> unit)
 
 type LoggerStore = 
@@ -12,7 +12,7 @@ type LoggerStore =
         logMessage : LogInfoFunc
     }
 
-let logError (logger : ILogger) (error : DomainError)  =
+let logError (logger : ILogger) (error : Errors)  =
     match error with
     | Error e -> logger.LogError e
     | ErrorExn exn -> logger.LogError (exn, "")

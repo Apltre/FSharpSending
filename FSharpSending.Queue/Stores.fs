@@ -6,8 +6,8 @@ open FSharpSending.Common.Helpers.Signal
 module JobMessageBus =
     type ToResultBusQueueFunc = ToResultBusQueueFunc of (Job -> unit)
     type ToSendingBusQueueFunc = ToSendingBusQueueFunc of (Job -> unit)
-    type GetResultsBusConsumerFunc = GetResultsBusConsumerFunc of ((string -> Async<Result<unit, DomainError>>) -> unit)
-    type GetSendingBusConsumerFunc = GetSendingBusConsumerFunc of ((string -> Async<Result<unit, DomainError>>) -> unit)
+    type GetResultsBusConsumerFunc = GetResultsBusConsumerFunc of ((string -> Async<Result<unit, Errors>>) -> unit)
+    type GetSendingBusConsumerFunc = GetSendingBusConsumerFunc of ((string -> Async<Result<unit, Errors>>) -> unit)
 
     type MessageBusStore = {
          enqueueToResult: ToResultBusQueueFunc

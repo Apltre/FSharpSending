@@ -1,4 +1,4 @@
-namespace FSharpSending.Sending
+namespace FSharpSending.Results
 
 open System.Threading.Tasks
 open Microsoft.Extensions.Hosting
@@ -7,16 +7,16 @@ open Microsoft.Extensions.Configuration
 open FSharpSending.Common.Types.CommonTypes
 open Logger
 open System
-open FSharpSending.Sending.Stores.JobMessageBus
+open FSharpSending.Results.Stores.JobMessageBus
 open FSharpSending.Common.Helpers.Json
 
-type SendingService(configuration : IConfiguration, busStore: MessageBusStore, loggerStore: LoggerStore, serviceProvider: IServiceProvider) =  
+type ResultsService(configuration : IConfiguration, busStore: MessageBusStore, loggerStore: LoggerStore, serviceProvider: IServiceProvider) =  
 
     let initlogInfo (LogInfoFunc logInfo) message =
         logInfo message
 
     let sendingConsumer (GetSendingBusConsumerFunc sendConsumer) (serviceProvider : IServiceProvider) =
-        let jobHandler = JobSendingProcessor.processJob  busStore.enqueueToQueue serviceProvider
+        let jobHandler = JobResultProcessor.processJob  busStore.enqueueToQueue serviceProvider
         let handler str = async {
             let handle' = JsonDecoder.decode >> (Result.bindToAsync jobHandler)
             return! handle' str
@@ -25,9 +25,9 @@ type SendingService(configuration : IConfiguration, busStore: MessageBusStore, l
         ()
     let service (loggerStore : LoggerStore) (busStore: MessageBusStore) (workflowId: WorkflowId) =
         let logInfo = initlogInfo (loggerStore.logMessage)
-        logInfo $"Sending service Id = {workflowId} started."
+        logInfo $"Results service Id = {workflowId} started."
         busStore.initializeQueues ()      
-        sendingConsumer busStore.getSendingConsumer serviceProvider
+        sendingConsumer busStore.getResultsConsumer serviceProvider
 
     interface IHostedService with
         member this.StartAsync (cancellationToken : CancellationToken) =

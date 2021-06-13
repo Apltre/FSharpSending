@@ -16,6 +16,7 @@ open FSharpSending.Common.Helpers.Signal
 
     type ValidatedResultHandlingJob = { 
         Id : JobId option
+        WorkflowId: WorkflowId
         ValidStatusSendingInfo : ValidStatusSendingInfo
         ValidSendingResultStatusInfo : ValidSendingResultStatusInfo
     }
@@ -51,6 +52,7 @@ open FSharpSending.Common.Helpers.Signal
         let toJob (job : ValidatedResultHandlingJob) =
             {
                 Id = job.Id
+                WorkflowId = job.WorkflowId
                 SendingInfo = ValidStatusSendingInfoModule.unwrap job.ValidStatusSendingInfo
                 ResultHandlingInfo = ValidatedResultHandlingInfoModule.toInfo job.ValidSendingResultStatusInfo
             }
@@ -82,6 +84,7 @@ open FSharpSending.Common.Helpers.Signal
     let validateJob (HandledResultJob job) =
         {
             Id = job.Id
+            WorkflowId = job.WorkflowId
             ValidStatusSendingInfo = handleBadJobStatus job.SendingInfo
             ValidSendingResultStatusInfo = handleBadJobResultHandlingStatus job.ResultHandlingInfo
         }

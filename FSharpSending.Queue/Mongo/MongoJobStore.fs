@@ -8,9 +8,11 @@ open FSharpSending.Common.Helpers.Signal
 open System.Collections.Generic
 
 module MongoJobStore =
-    let getPendingJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+    let getPendingJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
-            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.Pending && job.StartTime <= DateTime.Now)
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.Pending 
+                                                                 && job.StartTime <= DateTime.Now
+                                                                 && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
                                       .ToListAsync() |> Async.AwaitTask
@@ -18,10 +20,11 @@ module MongoJobStore =
                          |> List.map MongoJobModule.ofMongoJob
         }   
 
-    let getPendingResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+    let getPendingResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
             let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.Pending 
-                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now)
+                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now
+                                                                 && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
                                       .ToListAsync() |> Async.AwaitTask
@@ -29,9 +32,11 @@ module MongoJobStore =
                         |> List.map MongoJobModule.ofMongoJob 
         }        
 
-    let getStaleJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+    let getStaleJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
-            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.BeingProcessed && job.StartTime <= DateTime.Now.AddHours(-2.0))
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.BeingProcessed 
+                                                                 && job.StartTime <= DateTime.Now.AddHours(-2.0)
+                                                                 && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
                                       .ToListAsync() |> Async.AwaitTask
@@ -39,10 +44,11 @@ module MongoJobStore =
                          |> List.map MongoJobModule.ofMongoJob
         }   
 
-    let getStaleResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) ()  = 
+    let getStaleResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
             let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.BeingProcessed 
-                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now.AddHours(-2.0))
+                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now.AddHours(-2.0)
+                                                                 && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
                                       .ToListAsync() |> Async.AwaitTask
@@ -128,7 +134,7 @@ module MongoJobStore =
         actor.Post (jobs, Some completedSignalFunc)
         awaiter
     
-    let createMongoJobStore (jobsCollection: IMongoCollection<MongoJob>) = 
+    let createMongoJobStore (jobsCollection: IMongoCollection<MongoJob>) (workflowId: WorkflowId) = 
         let updateJobsActor = persistActor  (updateJobs jobsCollection)
         let enqueueJobsUpdate jobs = enqueueWithCompletedAwaiter updateJobsActor jobs
         let enqueueJobUpdate job = enqueueJobsUpdate [job]
@@ -139,10 +145,10 @@ module MongoJobStore =
         let enqueueJobAdd job = enqueueJobsAdd [job]      
 
         { 
-            getPendingJobs = GetPendingJobsFunc (getPendingJobs jobsCollection)
-            getPendingResultHandlingJobs = GetPendingResultHandlingJobsFunc (getPendingResultHandlingJobs jobsCollection)
-            getStaleJobs = GetStaleJobsFunc (getStaleJobs jobsCollection)
-            getStaleResultHandlingJobs = GetStaleResultHandlingJobsFunc (getStaleResultHandlingJobs jobsCollection)
+            getPendingJobs = GetPendingJobsFunc (getPendingJobs jobsCollection workflowId)
+            getPendingResultHandlingJobs = GetPendingResultHandlingJobsFunc (getPendingResultHandlingJobs jobsCollection workflowId)
+            getStaleJobs = GetStaleJobsFunc (getStaleJobs jobsCollection workflowId)
+            getStaleResultHandlingJobs = GetStaleResultHandlingJobsFunc (getStaleResultHandlingJobs jobsCollection workflowId)
             addJobs = AddJobsFunc enqueueJobsAdd
             addJob = AddJobFunc enqueueJobAdd
             updateJobs = UpdateJobsFunc enqueueJobsUpdate
