@@ -22,7 +22,7 @@ open Microsoft.Extensions.DependencyInjection
         let getAsyncMethod name =
             controllerType.GetMethod (asyncName name) |> Option.ofObj
         getSyncMethod name
-        |> Option.orElseWith (fun () -> getAsyncMethod (asyncName name))
+        |> Option.orElseWith (fun () -> getAsyncMethod name)
 
     let getOperation (sendingType: SendingType) (jobStatus: JobStatus) =
         let handlerName = sendingType.ToString().Split("_")

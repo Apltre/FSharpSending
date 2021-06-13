@@ -33,5 +33,5 @@ module Startup =
                ) |> ignore
 
             services.AddHttpClient<AgentsController>(fun serviceProvider (client : HttpClient) ->
-                client.BaseAddress <- new Uri(config.["Agents:Url"])      
+                client.BaseAddress <- new Uri(config.["Notifications:Url"])      
             )
