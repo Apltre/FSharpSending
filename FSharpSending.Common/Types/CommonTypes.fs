@@ -42,6 +42,13 @@ module CommonTypes =
     type JobId = JobId of string
     type WorkflowId = WorkflowId of int
 
+    module WorkflowIdModule =
+              let toInt (WorkflowId x) =
+                  int x
+
+              let ofInt (x : int) =
+                  WorkflowId x
+
     module JobId =
         let unwrapOfOption id =
                    match id with
@@ -84,6 +91,7 @@ module CommonTypes =
      
     type Job = { 
         Id : JobId option
+        WorkflowId : WorkflowId
         SendingInfo : SendingInfo
         ResultHandlingInfo : ResultHandlingInfo
     }
@@ -112,8 +120,14 @@ module JobIdConverter =
           |> Decode.andThen (fun x -> Decode.succeed (JobId x))
 
     let toJson (JobId jobId) = Encode.string jobId
-    
 
+module WorkflowIdConverter =
+    let ofJson : Decoder<WorkflowId> =
+          Decode.int
+          |> Decode.andThen (fun x -> Decode.succeed (WorkflowId x))
+
+    let toJson (WorkflowId workflowId) = Encode.int workflowId
+    
 module AttemptNumberConverter =
     let ofJson : Decoder<AttemptNumber> =
         Decode.int
@@ -171,6 +185,7 @@ module JobConverter =
     let ofJson : Decoder<Job> =
         Decode.object(fun fields -> {
             Id = fields.Optional.At ["Id"]  JobIdConverter.ofJson
+            WorkflowId = fields.Required.At ["WorkflowId"] WorkflowIdConverter.ofJson
             SendingInfo = fields.Required.At ["SendingInfo"] SendingInfoConverter.ofJson
             ResultHandlingInfo = fields.Required.At ["ResultHandlingInfo"] ResultHandlingInfoConverter.ofJson
         })
@@ -179,6 +194,7 @@ module JobConverter =
         Encode.object
             [
                 "Id", Encode.option JobIdConverter.toJson job.Id
+                "WorkflowId", WorkflowIdConverter.toJson job.WorkflowId
                 "SendingInfo", SendingInfoConverter.toJson job.SendingInfo
                 "ResultHandlingInfo", ResultHandlingInfoConverter.toJson job.ResultHandlingInfo
             ]

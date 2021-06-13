@@ -25,7 +25,7 @@ module Program =
                 )
             .ConfigureLogging(fun context logging -> 
                               logging.AddConfiguration(context.Configuration.GetSection("Logging"))
-                                     .AddConsole(fun c -> c.IncludeScopes <- false) |> ignore
+                                     .AddConsole() |> ignore
                               );
 
     [<EntryPoint>]
