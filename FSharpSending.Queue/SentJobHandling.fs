@@ -5,6 +5,7 @@ open System
 open FSharpSending.Queue.Stores.JobMessageBus
 open FSharpSending.Queue.Stores.DbJob
 open FSharpSending.Common.Helpers.Signal
+open MongoDB.Bson
 
     type ValidStatusSendingInfoJob =  ValidStatusSendingInfoJob of Job
     type PrepairedJob = PrepairedJob of Job
@@ -36,7 +37,8 @@ open FSharpSending.Common.Helpers.Signal
         let sendingInfo = job.SendingInfo
         match sendingInfo.Status with
         | JobStatus.ResendableError ->
-            let newJob = { job with SendingInfo = { sendingInfo with Status = JobStatus.Pending
+            let newJob = { job with Id = Some (JobId (ObjectId.GenerateNewId().ToString()))
+                                    SendingInfo = { sendingInfo with Status = JobStatus.Pending
                                                                               Message = None
                                                                               AttemptNumber = sendingInfo.AttemptNumber
                                                                               CreateTime = DateTime.Now

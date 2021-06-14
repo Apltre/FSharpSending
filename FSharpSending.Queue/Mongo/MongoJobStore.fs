@@ -94,34 +94,34 @@ module MongoJobStore =
                        addRange xs map
             | [] -> map
 
-
         let rec messageLoop (jobsMap: Dictionary<JobId option, Job>) awaitersList persistDate waitMultiplier = async {
             let waitTime = minimalWaitMs * waitMultiplier
             let! msgOption = inbox.TryReceive(waitTime)
             match msgOption with
-                | Some ((jobs: Job list), (commitAwaiter: EmitCompletedSignalFunc option)) ->
-                    match (persistDate > DateTime.Now) && (jobsMap.Count < maxBatchSize) with
-                    | true -> let newJobsMap = addRange jobs jobsMap 
-                              match commitAwaiter with
-                              | Some awaiter -> let newAwaitersList = awaiter :: awaitersList
-                                                return! messageLoop newJobsMap newAwaitersList persistDate 1
-                              | None -> return! messageLoop newJobsMap awaitersList persistDate 1
-                    | false -> let listToSave = jobsMap
-                                                |> addRange jobs
-                                                |> mapToList
-                               do! persist listToSave
-                               return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
+            | Some ((jobs: Job list), (commitAwaiter: EmitCompletedSignalFunc option)) ->
+                let newAwaitersList =
+                    match commitAwaiter with
+                    | Some awaiter -> awaiter :: awaitersList
+                    | None -> awaitersList
+                let newJobsMap = addRange jobs jobsMap 
+                match (persistDate > DateTime.Now) && (jobsMap.Count < maxBatchSize) with
+                | true -> match commitAwaiter with
+                          | Some awaiter -> return! messageLoop newJobsMap newAwaitersList persistDate 1
+                          | None -> return! messageLoop newJobsMap awaitersList persistDate 1
+                | false -> let listToSave = newJobsMap |> mapToList
+                           do! persist listToSave                       
+                           newAwaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
+                           return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
                                
-                | None -> match jobsMap.Count <> 0 with
-                          | true -> do! persist (mapToList jobsMap)
-                                    awaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
-                          | false -> ()
-                          let getNewMultiplier x = 
-                              match x < 5 with
-                              | true -> x + 1
-                              | false -> x   
-                          return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) (getNewMultiplier waitMultiplier)
-                            
+            | None -> match jobsMap.Count <> 0 with
+                        | true -> do! persist (mapToList jobsMap)
+                                  awaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
+                        | false -> ()
+            let getNewMultiplier x = 
+                match x < 5 with
+                | true -> x + 1
+                | false -> x   
+            return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) (getNewMultiplier waitMultiplier)                    
         }
         messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
         )

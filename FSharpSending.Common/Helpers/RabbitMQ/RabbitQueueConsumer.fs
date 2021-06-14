@@ -34,14 +34,14 @@ module RabbitQueueConsumer =
         let log' = log logError
 
         let rec messageLoop cleanDate = async {
-            let! msgOption = inbox.TryReceive(60000)
+            let! msgOption = inbox.TryReceive(10000)
             match msgOption with
             | None -> ()
             | Some msg ->  match msg.Redelivered with
-                            | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
-                                      | true -> ()
-                                      | false -> do! handle' msg.Body
-                            | false -> do! handle' msg.Body
+                           | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
+                                     | true -> ()
+                                     | false -> do! handle' msg.Body
+                           | false -> do! handle' msg.Body
                            try
                                 channel.BasicAck (msg.DeliveryTag, false)
                                 match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
@@ -64,9 +64,9 @@ module RabbitQueueConsumer =
 
     let getNewQueueConsumer (rabbitChannel: IModel) queue (logError: LogErrorFunc) (handler: string -> Async<Result<unit, Errors>>) = 
         let actor  = consumeActor rabbitChannel logError handler
-        let enqueue message = enqueue actor message
+        let enqueue' message = enqueue actor message
         let consumer = new EventingBasicConsumer(rabbitChannel)
         let eventHandler sender (message:BasicDeliverEventArgs) = 
-            enqueue message
+            enqueue' message
         consumer.Received.AddHandler(new EventHandler<BasicDeliverEventArgs>(eventHandler))
         rabbitChannel.BasicConsume(queue, false, consumer) |> ignore
