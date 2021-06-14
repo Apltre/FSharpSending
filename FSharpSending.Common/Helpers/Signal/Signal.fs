@@ -13,7 +13,7 @@ module CompletedSignalModule =
             return ()
         }
 
-    let createDefault =
+    let createDefault () =
         let channelOptions = BoundedChannelOptions(capacity = 1, SingleReader = true, SingleWriter = true)
         let channel = Channel.CreateBounded<bool>(channelOptions)
         let readerChannel = channel.Reader

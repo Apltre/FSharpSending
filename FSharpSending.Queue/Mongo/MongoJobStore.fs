@@ -105,9 +105,7 @@ module MongoJobStore =
                     | None -> awaitersList
                 let newJobsMap = addRange jobs jobsMap 
                 match (persistDate > DateTime.Now) && (jobsMap.Count < maxBatchSize) with
-                | true -> match commitAwaiter with
-                          | Some awaiter -> return! messageLoop newJobsMap newAwaitersList persistDate 1
-                          | None -> return! messageLoop newJobsMap awaitersList persistDate 1
+                | true -> return! messageLoop newJobsMap newAwaitersList persistDate 1
                 | false -> let listToSave = newJobsMap |> mapToList
                            do! persist listToSave                       
                            newAwaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
@@ -130,7 +128,7 @@ module MongoJobStore =
         actor.Post (jobs, None)
 
     let enqueueWithCompletedAwaiter (actor: MailboxProcessor<_>) (jobs: Job list) =
-        let (completedSignalFunc, awaiter) = CompletedSignalModule.createDefault
+        let (completedSignalFunc, awaiter) = CompletedSignalModule.createDefault ()
         actor.Post (jobs, Some completedSignalFunc)
         awaiter
     

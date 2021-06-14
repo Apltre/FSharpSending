@@ -9,7 +9,7 @@ open System
 module StaleJobsHandler =
     type StaleJobsCount = int
 
-    let handleNewStaleJobs (GetStaleJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) () : Async<(StaleJobsCount * CompletedSignalAwaiter)> =
+    let handleNewStaleJobs (GetStaleJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) () : Async<(StaleJobsCount * CompletedSignalAwaiter option)> =
         let setJobsToPending job = 
             { job with SendingInfo = 
                         { job.SendingInfo with Status = JobStatus.Pending 
@@ -17,13 +17,16 @@ module StaleJobsHandler =
             }
         async {
             let! staleJobs = getJobs ()
-            List.iter (fun (job) -> log $"Job Id = {job.Id.Value} was stale.") staleJobs
-            let resetToPendingJobs = List.map setJobsToPending staleJobs
-            let commitAwaiter = updateJobs resetToPendingJobs
-            return (staleJobs.Length, commitAwaiter)
+            match (List.length staleJobs) > 0 with
+            | true ->
+                List.iter (fun (job) -> log $"Job Id = {job.Id.Value} was stale.") staleJobs
+                let resetToPendingJobs = List.map setJobsToPending staleJobs
+                let commitAwaiter = updateJobs resetToPendingJobs
+                return (staleJobs.Length, Some commitAwaiter)
+            | false -> return (0, None)
         }
 
-    let handleStaleResultJobs (GetStaleResultHandlingJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) () : Async<(StaleJobsCount * CompletedSignalAwaiter)> =
+    let handleStaleResultJobs (GetStaleResultHandlingJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) () : Async<(StaleJobsCount * CompletedSignalAwaiter option)> =
         let setJobsToResultPending job = 
             { job with ResultHandlingInfo = 
                         { job.ResultHandlingInfo with ResultHandlingStatus = Some JobResultHandlingStatus.Pending
@@ -31,10 +34,13 @@ module StaleJobsHandler =
             }
         async {
             let! staleResultJobs = getJobs ()
-            List.iter (fun (job) -> log $"Job Id = {job.Id.Value} was stale.") staleResultJobs
-            let resetToPendingResultProcessedJobs = List.map setJobsToResultPending staleResultJobs
-            let commitAwaiter = updateJobs resetToPendingResultProcessedJobs
-            return (staleResultJobs.Length, commitAwaiter)
+            match (List.length staleResultJobs) > 0 with
+            | true ->
+                List.iter (fun (job) -> log $"Job Id = {job.Id.Value} was stale.") staleResultJobs
+                let resetToPendingResultProcessedJobs = List.map setJobsToResultPending staleResultJobs
+                let commitAwaiter = updateJobs resetToPendingResultProcessedJobs
+                return (staleResultJobs.Length, Some commitAwaiter)
+            | false -> return (0, None)
         }
 
     let handleStaleJobs (jobStore: DbJobStore) (loggerFunc: LogInfoFunc) () =
@@ -46,9 +52,15 @@ module StaleJobsHandler =
                 let! (handleResultJobsCount, hrjCommitAwaiter) = handleR ()
 
                 match (handledJobsCount + handleResultJobsCount) > 0 with
-                | true -> do! CompletedSignalModule.awaitCompleted hjCommitAwaiter
-                          do! CompletedSignalModule.awaitCompleted hrjCommitAwaiter
+                | true -> match hjCommitAwaiter with
+                          | Some awaiter -> do! CompletedSignalModule.awaitCompleted awaiter
+                          | None -> ()
+
+                          match hrjCommitAwaiter with
+                          | Some awaiter -> do! CompletedSignalModule.awaitCompleted awaiter
+                          | None -> ()
+                        
                 | false -> do! Async.Sleep(1000)
-                do! handle ()   
+                do! handle ()
             }
         handle ()
