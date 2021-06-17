@@ -9,12 +9,13 @@ open System
 module StaleJobsHandler =
     type StaleJobsCount = int
 
+    let setJobsToPending job = 
+        { job with SendingInfo = 
+                    { job.SendingInfo with Status = JobStatus.Pending 
+                                           StartTime = DateTime.Now }
+        }
+
     let handleNewStaleJobs (GetStaleJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) () : Async<(StaleJobsCount * CompletedSignalAwaiter option)> =
-        let setJobsToPending job = 
-            { job with SendingInfo = 
-                        { job.SendingInfo with Status = JobStatus.Pending 
-                                               StartTime = DateTime.Now }
-            }
         async {
             let! staleJobs = getJobs ()
             match (List.length staleJobs) > 0 with
@@ -26,12 +27,13 @@ module StaleJobsHandler =
             | false -> return (0, None)
         }
 
+    let setJobsToResultPending job = 
+        { job with ResultHandlingInfo = 
+                    { job.ResultHandlingInfo with ResultHandlingStatus = Some JobResultHandlingStatus.Pending
+                                                  ResultHandlingStartDate = Some DateTime.Now }
+        }
+
     let handleStaleResultJobs (GetStaleResultHandlingJobsFunc getJobs) (LogInfoFunc log) (UpdateJobsFunc updateJobs) () : Async<(StaleJobsCount * CompletedSignalAwaiter option)> =
-        let setJobsToResultPending job = 
-            { job with ResultHandlingInfo = 
-                        { job.ResultHandlingInfo with ResultHandlingStatus = Some JobResultHandlingStatus.Pending
-                                                      ResultHandlingStartDate = Some DateTime.Now }
-            }
         async {
             let! staleResultJobs = getJobs ()
             match (List.length staleResultJobs) > 0 with

@@ -8,10 +8,13 @@ open FSharpSending.Common.Helpers.Signal
 open System.Collections.Generic
 
 module MongoJobStore =
+    let staleBorderTime () = DateTime.Now.AddHours(-2.0)
+
     let getPendingJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
             let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.Pending 
                                                                  && job.StartTime <= DateTime.Now
+                                                                 && job.StartTime > staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
@@ -24,6 +27,7 @@ module MongoJobStore =
         async {
             let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.Pending 
                                                                  && job.ResultHandlingStartDate.Value <= DateTime.Now
+                                                                 && job.ResultHandlingStartDate.Value > staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
@@ -34,8 +38,8 @@ module MongoJobStore =
 
     let getStaleJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
-            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.BeingProcessed 
-                                                                 && job.StartTime <= DateTime.Now.AddHours(-2.0)
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> (job.Status = JobStatus.BeingProcessed ||  job.Status = JobStatus.Pending)
+                                                                 && job.StartTime <= staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
@@ -46,8 +50,8 @@ module MongoJobStore =
 
     let getStaleResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
-            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.BeingProcessed 
-                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now.AddHours(-2.0)
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> (job.ResultHandlingStatus.Value = JobResultHandlingStatus.BeingProcessed || job.ResultHandlingStatus.Value = JobResultHandlingStatus.Pending)
+                                                                 && job.ResultHandlingStartDate.Value <= staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)

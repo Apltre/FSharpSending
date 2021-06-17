@@ -18,7 +18,7 @@ type ResultsService(configuration : IConfiguration, busStore: MessageBusStore, l
     let sendingConsumer (GetSendingBusConsumerFunc sendConsumer) (serviceProvider : IServiceProvider) =
         let jobHandler = JobResultProcessor.processJob  busStore.enqueueToQueue serviceProvider
         let handler str = async {
-            let handle' = JsonDecoder.decode >> (Result.bindToAsync jobHandler)
+            let handle' = JsonDecoder.decode >> (ResultAsync.bindToAsync jobHandler)
             return! handle' str
         }
         sendConsumer handler
