@@ -10,7 +10,7 @@ module DependencyConfiguration =
         let rabbitConfiguration = configuration.GetSection("Rabbit")
         services.Configure<ConnectionFactory>(rabbitConfiguration) |> ignore
 
-        services.AddSingleton<IConnection>(fun serviceProvider ->
+        services.AddTransient<IConnection>(fun serviceProvider ->
             let factory = serviceProvider.GetRequiredService<IOptions<ConnectionFactory>>().Value
             factory.AutomaticRecoveryEnabled <- true
             factory.TopologyRecoveryEnabled <- true

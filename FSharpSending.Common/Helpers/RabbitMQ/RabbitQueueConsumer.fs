@@ -10,8 +10,9 @@ open System.Collections.Generic
 
 module RabbitQueueConsumer =
     let consumedHandler (handler: string -> Async<Result<unit, Errors>>) (LogErrorFunc logError) (data:ReadOnlyMemory<byte>) = async {
-               let body = data.ToArray()
+               let body = data.ToArray()           
                let message = Encoding.UTF8.GetString body
+               Console.WriteLine(" [x] Received {0} {1}","consumedHandler", message)
                let! result = handler message
                result
                |> Result.teeError logError
@@ -37,7 +38,8 @@ module RabbitQueueConsumer =
             let! msgOption = inbox.TryReceive(10000)
             match msgOption with
             | None -> ()
-            | Some msg ->  match msg.Redelivered with
+            | Some msg ->  
+                           match msg.Redelivered with
                            | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
                                      | true -> ()
                                      | false -> do! handle' msg.Body
@@ -67,6 +69,8 @@ module RabbitQueueConsumer =
         let enqueue' message = enqueue actor message
         let consumer = new EventingBasicConsumer(rabbitChannel)
         let eventHandler sender (message:BasicDeliverEventArgs) = 
+            let mlg = Encoding.UTF8.GetString (message.Body.ToArray())
+            Console.WriteLine(" [x] Received {0} {1}",queue, mlg)
             enqueue' message
         consumer.Received.AddHandler(new EventHandler<BasicDeliverEventArgs>(eventHandler))
         rabbitChannel.BasicConsume(queue, false, consumer) |> ignore

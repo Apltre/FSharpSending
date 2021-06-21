@@ -44,9 +44,10 @@ module Startup =
             ) |> ignore
 
             services.AddSingleton<MessageBusStore>(fun serviceProvider ->
-                let rabbitConnection = serviceProvider.GetRequiredService<IConnection>()
+                let rabbitConsumeConnection = serviceProvider.GetRequiredService<IConnection>()
+                let rabbitPublishConnection = serviceProvider.GetRequiredService<IConnection>()
                 let loggerStore = serviceProvider.GetRequiredService<LoggerStore>()
-                RabbitJobStore.createRabbitJobStore rabbitConnection workflowId loggerStore.logError
+                RabbitJobStore.createRabbitJobStore rabbitConsumeConnection rabbitPublishConnection workflowId loggerStore.logError
             ) |> ignore
 
             services.AddSingleton<Logger.LoggerStore>(fun serviceProvider ->
