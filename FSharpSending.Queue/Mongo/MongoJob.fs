@@ -3,13 +3,10 @@
 open System
 open FSharpSending.Common.Types.CommonTypes
 open MongoDB.Bson
-open MongoDB.Bson.Serialization.Attributes
-open MongoDB.Bson.Serialization.IdGenerators
 
 type MongoJob = 
     {
-        [<BsonId (IdGenerator = typeof<StringObjectIdGenerator>)>]
-        Id : string
+        Id : ObjectId
         WorkflowId: int
         Data : BsonDocument
         Type : SendingType
@@ -36,7 +33,7 @@ module MongoJobModule =
         let resultsInfo = job.ResultHandlingInfo
 
         {
-            Id =  job.Id |> JobId.unwrapOfOption
+            Id =  job.Id |> JobId.unwrapOfOption |> ObjectId
             WorkflowId = job.WorkflowId |> WorkflowIdModule.toInt
             MongoJob.Data = (jsonToBsonDocument sendingInfo.Data BsonDocument.Parse) |> Option.toObj
             Type = sendingInfo.Type
@@ -58,7 +55,7 @@ module MongoJobModule =
                 | None -> None
                 | Some x -> Some (x.ToJson())
         {
-            Id = job.Id |> JobId.wrapToOption
+            Id = job.Id.ToString() |> JobId.wrapToOption
             WorkflowId = job.WorkflowId |> WorkflowIdModule.ofInt
             SendingInfo = 
                 {

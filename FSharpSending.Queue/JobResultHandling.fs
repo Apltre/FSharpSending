@@ -104,15 +104,19 @@ open FSharpSending.Common.Helpers.Signal
                                          }
             | _ -> PrepairedJob job
 
-    let updateJob (UpdateJobFunc update) (PrepairedJob job) =
-        let job = ValidatedResultHandlingJobModule.toJob job
-        job
-        |> update 
-        |> CompletedSignalModule.awaitCompleted
-        |> Async.RunSynchronously
+    let updateJob (UpdateJobFunc update) (PrepairedJob job) = async {
+        let awaiter =
+            job 
+            |> ValidatedResultHandlingJobModule.toJob 
+            |> update 
+            |> CompletedSignalModule.awaitCompleted
+        return! awaiter
+    }
 
-    let handleResultJob (update : UpdateJobFunc) (job : HandledResultJob)  =
-        job |> validateJob 
-            |> handleJobResultHandling
-            |> updateJob update
-            |> Ok
+    let handleResultJob (update : UpdateJobFunc) (job : HandledResultJob)  = async {
+        return! job 
+                |> validateJob 
+                |> PipeAsync.switch handleJobResultHandling
+                |> PipeAsync.tee (updateJob update)
+                |> PipeAsync.mapUnit
+    }

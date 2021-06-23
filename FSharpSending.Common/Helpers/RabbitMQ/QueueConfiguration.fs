@@ -15,7 +15,7 @@ module QueueHelper =
 
     let queueJob (rabbitChannel : IModel) (LogErrorFunc log) queue (job: Job) =
         let json = Encode.toString 0 (JobConverter.toJson job)
-        let jsonBytes = Encoding.UTF8.GetBytes(json);
+        let jsonBytes = Encoding.UTF8.GetBytes json 
         try
-            rabbitChannel.BasicPublish("", queue, null, ReadOnlyMemory(jsonBytes))
+           rabbitChannel.BasicPublish("", queue, null, ReadOnlyMemory(jsonBytes))
         with exn -> log (MessageQueueEnqueueFailExn exn)

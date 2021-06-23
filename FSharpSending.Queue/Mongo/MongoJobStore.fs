@@ -8,10 +8,13 @@ open FSharpSending.Common.Helpers.Signal
 open System.Collections.Generic
 
 module MongoJobStore =
+    let staleBorderTime () = DateTime.Now.AddHours(-2.0)
+
     let getPendingJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
             let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.Pending 
                                                                  && job.StartTime <= DateTime.Now
+                                                                 && job.StartTime > staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
@@ -24,6 +27,7 @@ module MongoJobStore =
         async {
             let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.Pending 
                                                                  && job.ResultHandlingStartDate.Value <= DateTime.Now
+                                                                 && job.ResultHandlingStartDate.Value > staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
@@ -34,8 +38,8 @@ module MongoJobStore =
 
     let getStaleJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
-            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.Status = JobStatus.BeingProcessed 
-                                                                 && job.StartTime <= DateTime.Now.AddHours(-2.0)
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> (job.Status = JobStatus.BeingProcessed ||  job.Status = JobStatus.Pending)
+                                                                 && job.StartTime <= staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
@@ -46,8 +50,8 @@ module MongoJobStore =
 
     let getStaleResultHandlingJobs (jobsCollection: IMongoCollection<MongoJob>) (WorkflowId workflowId) ()  = 
         async {
-            let! jobs = jobsCollection.Find<MongoJob>(fun job -> job.ResultHandlingStatus.Value = JobResultHandlingStatus.BeingProcessed 
-                                                                 && job.ResultHandlingStartDate.Value <= DateTime.Now.AddHours(-2.0)
+            let! jobs = jobsCollection.Find<MongoJob>(fun job -> (job.ResultHandlingStatus.Value = JobResultHandlingStatus.BeingProcessed || job.ResultHandlingStatus.Value = JobResultHandlingStatus.Pending)
+                                                                 && job.ResultHandlingStartDate.Value <= staleBorderTime ()
                                                                  && job.WorkflowId = workflowId)
                                       .SortBy(fun job -> job.Id :> Object)
                                       .Limit(100)
@@ -94,34 +98,32 @@ module MongoJobStore =
                        addRange xs map
             | [] -> map
 
-
         let rec messageLoop (jobsMap: Dictionary<JobId option, Job>) awaitersList persistDate waitMultiplier = async {
             let waitTime = minimalWaitMs * waitMultiplier
             let! msgOption = inbox.TryReceive(waitTime)
             match msgOption with
-                | Some ((jobs: Job list), (commitAwaiter: EmitCompletedSignalFunc option)) ->
-                    match (persistDate > DateTime.Now) && (jobsMap.Count < maxBatchSize) with
-                    | true -> let newJobsMap = addRange jobs jobsMap 
-                              match commitAwaiter with
-                              | Some awaiter -> let newAwaitersList = awaiter :: awaitersList
-                                                return! messageLoop newJobsMap newAwaitersList persistDate 1
-                              | None -> return! messageLoop newJobsMap awaitersList persistDate 1
-                    | false -> let listToSave = jobsMap
-                                                |> addRange jobs
-                                                |> mapToList
-                               do! persist listToSave
-                               return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
+            | Some ((jobs: Job list), (commitAwaiter: EmitCompletedSignalFunc option)) ->
+                let newAwaitersList =
+                    match commitAwaiter with
+                    | Some awaiter -> awaiter :: awaitersList
+                    | None -> awaitersList
+                let newJobsMap = addRange jobs jobsMap 
+                match (persistDate > DateTime.Now) && (jobsMap.Count < maxBatchSize) with
+                | true -> return! messageLoop newJobsMap newAwaitersList persistDate 1
+                | false -> let listToSave = newJobsMap |> mapToList
+                           do! persist listToSave                       
+                           newAwaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
+                           return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
                                
-                | None -> match jobsMap.Count <> 0 with
-                          | true -> do! persist (mapToList jobsMap)
-                                    awaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
-                          | false -> ()
-                          let getNewMultiplier x = 
-                              match x < 5 with
-                              | true -> x + 1
-                              | false -> x   
-                          return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) (getNewMultiplier waitMultiplier)
-                            
+            | None -> match jobsMap.Count <> 0 with
+                        | true -> do! persist (mapToList jobsMap)
+                                  awaitersList |> List.iter (fun (EmitCompletedSignalFunc signalFunc) -> signalFunc ())
+                        | false -> ()
+            let getNewMultiplier x = 
+                match x < 5 with
+                | true -> x + 1
+                | false -> x   
+            return! messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) (getNewMultiplier waitMultiplier)                    
         }
         messageLoop (new Dictionary<JobId option, Job>()) List.empty (getNewPersistDate ()) 1
         )
@@ -130,7 +132,7 @@ module MongoJobStore =
         actor.Post (jobs, None)
 
     let enqueueWithCompletedAwaiter (actor: MailboxProcessor<_>) (jobs: Job list) =
-        let (completedSignalFunc, awaiter) = CompletedSignalModule.createDefault
+        let (completedSignalFunc, awaiter) = CompletedSignalModule.createDefault ()
         actor.Post (jobs, Some completedSignalFunc)
         awaiter
     

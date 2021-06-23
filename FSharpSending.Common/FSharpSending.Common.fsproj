@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Compile Include="Helpers\Pipe\Pipe.fs" />
+    <Compile Include="Helpers\Pipe\PipeAsync.fs" />
     <Compile Include="Types\CommonTypes.fs" />
     <Content Include="Settings\appsettings.Agents.Development.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -25,6 +26,7 @@
     </Content>
     <Compile Include="Helpers\Signal\Signal.fs" />
     <Compile Include="Helpers\Result\Result.fs" />
+    <Compile Include="Helpers\Result\AsyncResult.fs" />
     <Compile Include="Helpers\Json\Decoder.fs" />
     <Compile Include="Helpers\Common\CommonHelper.fs" />
     <Compile Include="Helpers\Logger\Logger.fs" />

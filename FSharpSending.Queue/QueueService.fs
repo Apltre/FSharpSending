@@ -21,8 +21,9 @@ type QueueService(configuration : IConfiguration, busStore: MessageBusStore, job
          let handlerAsync message = async {
             let handler = JsonDecoder.decode 
                           >> Result.map SentJob 
-                          >> Result.bind sentJobHandler
-            return handler message
+                          >> ResultAsync.teeToAsync sentJobHandler
+                          >> ResultAsync.mapUnit
+            return! handler message
          }
          sentConsumer handlerAsync
 
@@ -31,8 +32,9 @@ type QueueService(configuration : IConfiguration, busStore: MessageBusStore, job
          let handlerAsync message = async {
             let handler = JsonDecoder.decode
                           >> Result.map HandledResultJob 
-                          >> Result.bind resultJobHandler
-            return handler message
+                          >> ResultAsync.teeToAsync resultJobHandler
+                          >> ResultAsync.mapUnit
+            return! handler message
          }
          sentConsumer handlerAsync
 

@@ -45,9 +45,3 @@ let plus addSuccess addFailure switch1 switch2 x =
     | Error f1,Ok _  -> Error f1
     | Ok _ ,Error f2 -> Error f2
     | Error f1,Error f2 -> Error (addFailure f1 f2)
-
-let bindToAsync f twoTrackInput = async {
-    match twoTrackInput with
-    | Error err -> return Error err
-    | Ok x -> return! f x
-}
