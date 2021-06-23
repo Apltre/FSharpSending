@@ -29,14 +29,13 @@ module RabbitJobStore =
             |> Pipe.tee (declareReliableChannelForWorkflow QueueNames.getResultsToQueueName)
             |> ignore
 
-    let createRabbitJobStore (consumeConnection : IConnection) (publishConnection : IConnection) (workflowId: WorkflowId) (logError: LogErrorFunc) =
-        let actor () = 
-            getActor (publishConnection.CreateModel ()) logError
+    let createRabbitJobStore (connection : IConnection) (workflowId: WorkflowId) (logError: LogErrorFunc) =
+        let actor = getActor (connection.CreateModel ()) logError
 
         {
-            enqueueToResult = ToResultBusQueueFunc (enqueue (actor ()) (QueueNames.getQueueToResultsName workflowId)) 
-            enqueueToSending = ToSendingBusQueueFunc (enqueue (actor ()) (QueueNames.getQueueToSendingName workflowId))
-            getResultsConsumer = GetResultsBusConsumerFunc (RabbitQueueConsumer.getNewQueueConsumer (consumeConnection.CreateModel ()) (QueueNames.getResultsToQueueName workflowId) logError)
-            getSendingConsumer = GetSendingBusConsumerFunc (RabbitQueueConsumer.getNewQueueConsumer (consumeConnection.CreateModel ()) (QueueNames.getSendingToQueueName workflowId) logError)
-            initializeQueues = initializeRabbitQueues workflowId (publishConnection.CreateModel ()) 
+            enqueueToResult = ToResultBusQueueFunc (enqueue actor (QueueNames.getQueueToResultsName workflowId)) 
+            enqueueToSending = ToSendingBusQueueFunc (enqueue actor (QueueNames.getQueueToSendingName workflowId))
+            getResultsConsumer = GetResultsBusConsumerFunc (RabbitQueueConsumer.getNewQueueConsumer (connection.CreateModel ()) (QueueNames.getResultsToQueueName workflowId) logError)
+            getSendingConsumer = GetSendingBusConsumerFunc (RabbitQueueConsumer.getNewQueueConsumer (connection.CreateModel ()) (QueueNames.getSendingToQueueName workflowId) logError)
+            initializeQueues = initializeRabbitQueues workflowId (connection.CreateModel ()) 
         }

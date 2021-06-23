@@ -7,7 +7,6 @@ open RabbitMQ.Client.Events
 open System
 open System.Text
 open System.Collections.Generic
-open System.Threading
 
 module RabbitQueueConsumer =
     
@@ -44,20 +43,22 @@ module RabbitQueueConsumer =
             match msgOption with
             | None -> ()
             | Some msg ->  
-                           match msg.Redelivered with
-                           | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
-                                     | true -> ()
-                                     | false -> do! handle' msg.Message
-                           | false -> do! handle' msg.Message
-                           try
-                                channel.BasicAck (msg.DeliveryTag, false)
-                                match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
-                                | false -> ()
-                                | true -> acknowledgeFailedTags.Remove(msg.DeliveryTag) |> ignore          
-                           with exn ->  match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
-                                        | false -> acknowledgeFailedTags.Add(msg.DeliveryTag, DateTime.Now)
-                                        | true -> ()
-                                        log' (MessageQueueConsumeFailExn exn)
+                match msg.Redelivered with
+                | true -> 
+                    match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
+                    | true -> ()
+                    | false -> do! handle' msg.Message
+                | false -> do! handle' msg.Message
+                try
+                    channel.BasicAck (msg.DeliveryTag, false)
+                    match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
+                    | false -> ()
+                    | true -> acknowledgeFailedTags.Remove(msg.DeliveryTag) |> ignore          
+                with exn ->  
+                    match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
+                    | false -> acknowledgeFailedTags.Add(msg.DeliveryTag, DateTime.Now)
+                    | true -> ()
+                    log' (MessageQueueConsumeFailExn exn)
             match cleanDate >= DateTime.Now with
             | true -> return! messageLoop cleanDate
             | false -> handleLostMessages logError acknowledgeFailedTags
@@ -75,7 +76,6 @@ module RabbitQueueConsumer =
         let consumer = new EventingBasicConsumer(rabbitChannel)
         let eventHandler sender (message: BasicDeliverEventArgs) = 
             let messageString = Encoding.UTF8.GetString (message.Body.ToArray())
-            Console.WriteLine(" [x] Received threadId {0} queue: {1} job: {2}  \n\n", Thread.CurrentThread.ManagedThreadId, queue, messageString)
             enqueue' { DeliveryTag = message.DeliveryTag; Message = messageString; Redelivered = message.Redelivered }
         consumer.Received.AddHandler(new EventHandler<BasicDeliverEventArgs>(eventHandler))
         rabbitChannel.BasicConsume(queue, false, consumer) |> ignore
