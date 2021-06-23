@@ -44,10 +44,9 @@ type QueueService(configuration : IConfiguration, busStore: MessageBusStore, job
         busStore.initializeQueues ()
         
         sentConsumer busStore.getSendingConsumer jobStore
-       // resultConsumer busStore.getResultsConsumer jobStore.updateJob
-        //StaleJobsHandler.handleStaleJobs jobStore loggerStore.logMessage () |> Async.Start
-        //PendingJobsHandler.handlePendingJobs jobStore busStore loggerStore.logMessage () |> Async.RunSynchronously
-        Async.Sleep(1000000000) |> Async.RunSynchronously
+        resultConsumer busStore.getResultsConsumer jobStore.updateJob
+        StaleJobsHandler.handleStaleJobs jobStore loggerStore.logMessage () |> Async.Start
+        PendingJobsHandler.handlePendingJobs jobStore busStore loggerStore.logMessage () |> Async.RunSynchronously
 
     interface IHostedService with
         member this.StartAsync (cancellationToken : CancellationToken) =

@@ -7,16 +7,21 @@ open RabbitMQ.Client.Events
 open System
 open System.Text
 open System.Collections.Generic
+open System.Threading
 
 module RabbitQueueConsumer =
-    let consumedHandler (handler: string -> Async<Result<unit, Errors>>) (LogErrorFunc logError) (data:ReadOnlyMemory<byte>) = async {
-               let body = data.ToArray()           
-               let message = Encoding.UTF8.GetString body
-               Console.WriteLine(" [x] Received {0} {1}","consumedHandler", message)
-               let! result = handler message
-               result
-               |> Result.teeError logError
-               |> ignore
+    
+    type RabbitMessage = {
+        DeliveryTag: uint64
+        Redelivered: bool
+        Message: string
+    }
+    
+    let consumedHandler (handler: string -> Async<Result<unit, Errors>>) (LogErrorFunc logError) (message: string) = async {
+        let! result = handler message
+        result
+        |> Result.teeError logError
+        |> ignore
     }
 
     let log (LogErrorFunc logError) message =
@@ -29,7 +34,7 @@ module RabbitQueueConsumer =
         |> Pipe.tee (List.iter(fun keyValue -> dictionary.Remove(keyValue.Key) |> ignore))
         |> List.iter (fun keyValue -> log (MessageQueueConsumeFail $"Job id = {keyValue.Key} wasnt acknowledged for two hours"))
 
-    let consumeActor (channel: IModel) (logError: LogErrorFunc) (handler: string -> Async<Result<unit, Errors>>) = MailboxProcessor.Start(fun (inbox: MailboxProcessor<BasicDeliverEventArgs>) ->
+    let consumeActor (channel: IModel) (logError: LogErrorFunc) (handler: string -> Async<Result<unit, Errors>>) = MailboxProcessor.Start(fun (inbox: MailboxProcessor<RabbitMessage>) ->
         let acknowledgeFailedTags = new Dictionary<uint64, DateTime>()
         let handle' = consumedHandler handler logError
         let log' = log logError
@@ -42,8 +47,8 @@ module RabbitQueueConsumer =
                            match msg.Redelivered with
                            | true -> match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
                                      | true -> ()
-                                     | false -> do! handle' msg.Body
-                           | false -> do! handle' msg.Body
+                                     | false -> do! handle' msg.Message
+                           | false -> do! handle' msg.Message
                            try
                                 channel.BasicAck (msg.DeliveryTag, false)
                                 match acknowledgeFailedTags.ContainsKey(msg.DeliveryTag) with
@@ -61,16 +66,16 @@ module RabbitQueueConsumer =
         messageLoop (DateTime.Now.AddMinutes(2.0))
         )
 
-    let enqueue (actor: MailboxProcessor<_>) (message:BasicDeliverEventArgs) = 
+    let enqueue (actor: MailboxProcessor<RabbitMessage>) message =
         actor.Post message
 
     let getNewQueueConsumer (rabbitChannel: IModel) queue (logError: LogErrorFunc) (handler: string -> Async<Result<unit, Errors>>) = 
-        let actor  = consumeActor rabbitChannel logError handler
+        let actor = consumeActor rabbitChannel logError handler
         let enqueue' message = enqueue actor message
         let consumer = new EventingBasicConsumer(rabbitChannel)
-        let eventHandler sender (message:BasicDeliverEventArgs) = 
-            let mlg = Encoding.UTF8.GetString (message.Body.ToArray())
-            Console.WriteLine(" [x] Received {0} {1}",queue, mlg)
-            enqueue' message
+        let eventHandler sender (message: BasicDeliverEventArgs) = 
+            let messageString = Encoding.UTF8.GetString (message.Body.ToArray())
+            Console.WriteLine(" [x] Received threadId {0} queue: {1} job: {2}  \n\n", Thread.CurrentThread.ManagedThreadId, queue, messageString)
+            enqueue' { DeliveryTag = message.DeliveryTag; Message = messageString; Redelivered = message.Redelivered }
         consumer.Received.AddHandler(new EventHandler<BasicDeliverEventArgs>(eventHandler))
         rabbitChannel.BasicConsume(queue, false, consumer) |> ignore
